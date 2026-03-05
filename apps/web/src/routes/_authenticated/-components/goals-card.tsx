@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 interface Goal {
   id: string
   title: string
@@ -19,11 +21,12 @@ export function GoalsCard({ goals }: GoalsCardProps) {
         <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
           Goals
         </h3>
-        {goals.length > 3 && (
-          <span className="text-xs text-stone-400">
-            {goals.length} total
-          </span>
-        )}
+        <Link
+          to="/goals"
+          className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+        >
+          {goals.length > 3 ? `View all ${goals.length}` : 'Manage'}
+        </Link>
       </div>
 
       {displayGoals.length > 0 ? (
@@ -55,9 +58,15 @@ export function GoalsCard({ goals }: GoalsCardProps) {
         </ul>
       ) : (
         <div className="text-center py-6">
-          <p className="text-sm text-stone-400">
-            No goals yet &mdash; add one!
+          <p className="text-sm text-stone-400 mb-3">
+            No goals yet
           </p>
+          <Link
+            to="/goals"
+            className="text-sm text-stone-600 font-medium hover:text-stone-900 transition-colors"
+          >
+            Add your first goal
+          </Link>
         </div>
       )}
     </div>
