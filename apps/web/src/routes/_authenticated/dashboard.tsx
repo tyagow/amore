@@ -1,20 +1,24 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
 import { getDashboardData } from '~/server/dashboard'
 import { getActiveCoaching } from '~/server/coaching'
+import { getPendingMoodDetections } from '~/server/mood-detection'
 import { HealthRing } from './-components/health-ring'
 import { MoodCard } from './-components/mood-card'
 import { MoodSelector } from './-components/mood-selector'
 import { GoalsCard } from './-components/goals-card'
 import { InsightsCard } from './-components/insights-card'
 import { CoachingCard } from './-components/coaching-card'
+import { MoodDetectionModal } from './-components/mood-detection-modal'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   loader: async () => {
-    const [dashboardData, activeCoaching] = await Promise.all([
+    const [dashboardData, activeCoaching, pendingMoodDetections] = await Promise.all([
       getDashboardData(),
       getActiveCoaching(),
+      getPendingMoodDetections(),
     ])
-    return { ...dashboardData, activeCoaching }
+    return { ...dashboardData, activeCoaching, pendingMoodDetections }
   },
   component: DashboardPage,
 })
@@ -22,6 +26,9 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
 function DashboardPage() {
   const data = Route.useLoaderData()
   const router = useRouter()
+  const [showMoodDetections, setShowMoodDetections] = useState(
+    data.pendingMoodDetections.length > 0,
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -62,6 +69,17 @@ function DashboardPage() {
         <GoalsCard goals={data.activeGoals} />
         <InsightsCard insights={data.recentInsights} />
       </div>
+
+      {/* AI mood detection floating notification */}
+      {showMoodDetections && data.pendingMoodDetections.length > 0 && (
+        <MoodDetectionModal
+          detections={data.pendingMoodDetections}
+          onResolved={() => {
+            setShowMoodDetections(false)
+            router.invalidate()
+          }}
+        />
+      )}
     </div>
   )
 }
