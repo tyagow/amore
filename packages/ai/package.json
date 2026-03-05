@@ -1,0 +1,20 @@
+{
+  "name": "@amore-couples/ai",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@amore-couples/types": "workspace:*",
+    "@anthropic-ai/sdk": "^0.52.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
