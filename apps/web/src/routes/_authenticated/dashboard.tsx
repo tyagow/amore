@@ -1,7 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { getDashboardData } from '~/server/dashboard'
 import { HealthRing } from './-components/health-ring'
 import { MoodCard } from './-components/mood-card'
+import { MoodSelector } from './-components/mood-selector'
 import { GoalsCard } from './-components/goals-card'
 import { InsightsCard } from './-components/insights-card'
 
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
 
 function DashboardPage() {
   const data = Route.useLoaderData()
+  const router = useRouter()
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -30,6 +32,11 @@ function DashboardPage() {
       {/* Health Ring — prominent at top */}
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-6 flex justify-center">
         <HealthRing score={data.couple.healthScore} />
+      </div>
+
+      {/* Mood Selector — set your mood */}
+      <div className="mb-6">
+        <MoodSelector onMoodSet={() => router.invalidate()} />
       </div>
 
       {/* Cards grid — 2 columns on desktop, 1 on mobile */}
