@@ -1,0 +1,32 @@
+{
+  "name": "@amore-couples/wa-bridge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env.local src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@amore-couples/ai": "workspace:*",
+    "@amore-couples/db": "workspace:*",
+    "@amore-couples/types": "workspace:*",
+    "@hapi/boom": "^10.0.0",
+    "@hono/node-server": "^1.0.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.0.0",
+    "pg": "^8.16.3",
+    "pino": "^9.0.0",
+    "ws": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.6",
+    "@types/ws": "^8.0.0",
+    "pino-pretty": "^13.1.3",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.2"
+  }
+}
