@@ -1,13 +1,12 @@
 import {
   createFileRoute,
-  Link,
   Outlet,
   redirect,
-  useNavigate,
   type ErrorComponentProps,
 } from '@tanstack/react-router'
-import { signOut } from '~/lib/auth-client'
 import { getAuthSession } from '~/server/auth'
+import { getMyCouple } from '~/server/connections'
+import { Nav } from './_authenticated/-components/nav'
 
 function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
@@ -37,80 +36,36 @@ function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const session = await getAuthSession()
     if (!session) {
       throw redirect({ to: '/login' })
     }
-    return { session }
+
+    // Check if user has a couple
+    const coupleData = await getMyCouple()
+    const hasCouple = !!coupleData
+
+    // If no couple and not already on /connect, redirect to /connect
+    if (!hasCouple && location.pathname !== '/connect') {
+      throw redirect({ to: '/connect' })
+    }
+
+    return { session, hasCouple }
   },
   component: AuthenticatedLayout,
   errorComponent: AuthErrorComponent,
 })
 
 function AuthenticatedLayout() {
-  const navigate = useNavigate()
-  const { session } = Route.useRouteContext()
-
-  const handleSignOut = async () => {
-    await signOut()
-    navigate({ to: '/' })
-  }
-
   return (
     <div className="min-h-screen bg-stone-50">
-      {/* Sticky nav bar */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link
-              to={'/dashboard' as string}
-              className="text-xl font-bold text-stone-900 tracking-tight"
-            >
-              Amore
-            </Link>
+      <Nav />
 
-            <div className="flex items-center gap-1">
-              <Link
-                to={'/dashboard' as string}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
-                activeProps={{ className: 'bg-stone-100 text-stone-900' }}
-              >
-                Dashboard
-              </Link>
-              <Link
-                to={'/connect' as string}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
-                activeProps={{ className: 'bg-stone-100 text-stone-900' }}
-              >
-                Connect
-              </Link>
-              <Link
-                to={'/whatsapp' as string}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
-                activeProps={{ className: 'bg-stone-100 text-stone-900' }}
-              >
-                WhatsApp
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {session?.user?.name && (
-              <span className="text-sm text-stone-600">{session.user.name}</span>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="px-3 py-1.5 text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Page content */}
-      <Outlet />
+      {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
+      <div className="md:ml-64 pb-20 md:pb-0">
+        <Outlet />
+      </div>
     </div>
   )
 }

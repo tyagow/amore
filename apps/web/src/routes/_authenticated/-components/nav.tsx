@@ -1,0 +1,157 @@
+import { Link, useNavigate } from '@tanstack/react-router'
+import { signOut } from '~/lib/auth-client'
+
+interface NavProps {
+  partnerMoodColor?: string | null
+}
+
+export function Nav({ partnerMoodColor }: NavProps) {
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate({ to: '/' })
+  }
+
+  return (
+    <>
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 md:hidden">
+        <div className="flex items-center justify-around px-2 py-2">
+          <NavItem to="/dashboard" label="Home" moodDot={partnerMoodColor}>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            </svg>
+          </NavItem>
+          <NavItem to="/goals" label="Goals">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </NavItem>
+          <NavItem to="/whatsapp" label="WhatsApp">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+          </NavItem>
+          <NavItem to="/connect" label="Profile">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </NavItem>
+        </div>
+      </nav>
+
+      {/* Desktop sidebar nav */}
+      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-64 flex-col bg-white border-r border-stone-200">
+        <div className="px-6 py-6">
+          <Link to="/dashboard" className="text-xl font-bold text-stone-900 tracking-tight">
+            Amore
+          </Link>
+        </div>
+
+        <div className="flex-1 px-3 space-y-1">
+          <SidebarItem to="/dashboard" label="Dashboard" moodDot={partnerMoodColor}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            </svg>
+          </SidebarItem>
+          <SidebarItem to="/goals" label="Goals">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </SidebarItem>
+          <SidebarItem to="/whatsapp" label="WhatsApp">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+          </SidebarItem>
+          <SidebarItem to="/connect" label="Profile">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </SidebarItem>
+        </div>
+
+        <div className="px-3 py-4 border-t border-stone-200">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
+      </nav>
+    </>
+  )
+}
+
+// ── Mobile nav item ──────────────────────────────────────
+
+function NavItem({
+  to,
+  label,
+  children,
+  moodDot,
+}: {
+  to: string
+  label: string
+  children: React.ReactNode
+  moodDot?: string | null
+}) {
+  return (
+    <Link
+      to={to}
+      className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-stone-400 transition-colors"
+      activeProps={{ className: 'text-stone-900' }}
+    >
+      <span className="relative">
+        {children}
+        {moodDot && (
+          <span
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+            style={{ backgroundColor: moodDot }}
+          />
+        )}
+      </span>
+      <span className="text-[10px] font-medium">{label}</span>
+    </Link>
+  )
+}
+
+// ── Desktop sidebar item ─────────────────────────────────
+
+function SidebarItem({
+  to,
+  label,
+  children,
+  moodDot,
+}: {
+  to: string
+  label: string
+  children: React.ReactNode
+  moodDot?: string | null
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
+      activeProps={{ className: 'bg-stone-100 text-stone-900' }}
+    >
+      <span className="relative">
+        {children}
+        {moodDot && (
+          <span
+            className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+            style={{ backgroundColor: moodDot }}
+          />
+        )}
+      </span>
+      {label}
+    </Link>
+  )
+}
