@@ -85,6 +85,13 @@ function AuthenticatedLayout() {
               >
                 Connect
               </Link>
+              <Link
+                to={'/whatsapp' as string}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
+                activeProps={{ className: 'bg-stone-100 text-stone-900' }}
+              >
+                WhatsApp
+              </Link>
             </div>
           </div>
 
