@@ -1,5 +1,5 @@
 export { analyzeConversation, type AnalysisResult } from './analyze'
-export { generateCoachingTips, type CoachingTip } from './coach'
+export { generateCoachingTips, generateMoodCoaching, type CoachingTip, type MoodCoachingInput } from './coach'
 export { extractEntities, type ExtractedEntities } from './extract'
 export { AIParseError } from './config'
 export { analysisResultSchema, extractedEntitiesSchema, coachingTipsSchema } from './schemas'

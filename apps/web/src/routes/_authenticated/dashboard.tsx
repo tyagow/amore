@@ -1,13 +1,21 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { getDashboardData } from '~/server/dashboard'
+import { getActiveCoaching } from '~/server/coaching'
 import { HealthRing } from './-components/health-ring'
 import { MoodCard } from './-components/mood-card'
 import { MoodSelector } from './-components/mood-selector'
 import { GoalsCard } from './-components/goals-card'
 import { InsightsCard } from './-components/insights-card'
+import { CoachingCard } from './-components/coaching-card'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
-  loader: () => getDashboardData(),
+  loader: async () => {
+    const [dashboardData, activeCoaching] = await Promise.all([
+      getDashboardData(),
+      getActiveCoaching(),
+    ])
+    return { ...dashboardData, activeCoaching }
+  },
   component: DashboardPage,
 })
 
@@ -38,6 +46,11 @@ function DashboardPage() {
       <div className="mb-6">
         <MoodSelector onMoodSet={() => router.invalidate()} />
       </div>
+
+      {/* Coaching Card — shown when partner has an alert mood */}
+      {data.activeCoaching.length > 0 && (
+        <CoachingCard coaching={data.activeCoaching} />
+      )}
 
       {/* Cards grid — 2 columns on desktop, 1 on mobile */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
