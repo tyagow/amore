@@ -2,6 +2,12 @@ import { db } from '@amore-couples/db/client'
 import { messages } from '@amore-couples/db/schema'
 import { eq, and, asc } from 'drizzle-orm'
 import type { proto } from '@whiskeysockets/baileys'
+import {
+  incrementMessageCounter,
+  checkAndTriggerAnalysis,
+  checkAndTriggerMoodDetection,
+} from '../analysis/trigger.js'
+import { log } from '../logger.js'
 
 export interface NormalizedMessage {
   coupleId: string
@@ -78,7 +84,32 @@ export async function persistMessages(
 ): Promise<number> {
   if (normalized.length === 0) return 0
   const result = await db.insert(messages).values(normalized).onConflictDoNothing()
-  return result.rowCount ?? 0
+  const insertedCount = result.rowCount ?? 0
+
+  if (insertedCount > 0) {
+    // All messages in a batch share the same coupleId
+    const coupleId = normalized[0].coupleId
+
+    // Increment counter and get new total
+    const newCount = await incrementMessageCounter(coupleId, insertedCount).catch((err) => {
+      log.error({ err, coupleId }, 'Failed to increment message counter')
+      return 0
+    })
+
+    // Fire-and-forget: check if analysis threshold reached
+    checkAndTriggerAnalysis(coupleId).catch((err) => {
+      log.error({ err, coupleId }, 'Failed to check analysis trigger')
+    })
+
+    // Fire-and-forget: mood detection every MOOD_CHECK_INTERVAL messages
+    // Use the last message's sender as the mood detection target
+    const lastSender = normalized[normalized.length - 1].senderId
+    checkAndTriggerMoodDetection(coupleId, lastSender, newCount).catch((err) => {
+      log.error({ err, coupleId }, 'Failed to check mood detection trigger')
+    })
+  }
+
+  return insertedCount
 }
 
 export async function getOldestMessage(coupleId: string, connectedUserId: string) {
