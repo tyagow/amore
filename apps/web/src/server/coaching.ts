@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import {
@@ -18,7 +19,7 @@ import { generateMoodCoaching, type CoachingTip } from '@amore-couples/ai'
  * Fetches context (profiles, recent messages) and stores the result as an insight.
  */
 export const generateMoodCoachingTips = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { moodStateId: string })
+  .inputValidator(z.object({ moodStateId: z.string() }))
   .handler(async ({ data }) => {
     const { session, couple, partnerId } = await requireCouple()
 

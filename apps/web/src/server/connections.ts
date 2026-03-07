@@ -1,9 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '~/lib/auth'
 import { db } from '@amore-couples/db'
 import { users, couples, connectionRequests } from '@amore-couples/db/schema'
 import { eq, and, or } from 'drizzle-orm'
+import { emitUserEvent } from '~/lib/events'
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -25,7 +27,7 @@ async function requireAuth() {
  * to prevent email enumeration.
  */
 export const searchAndSendRequest = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { email: string })
+  .inputValidator(z.object({ email: z.string().email() }))
   .handler(async ({ data }) => {
     const session = await requireAuth()
     const { email } = data
@@ -83,6 +85,15 @@ export const searchAndSendRequest = createServerFn({ method: 'POST' })
       status: 'pending',
     })
 
+    // Notify the target user in real-time
+    emitUserEvent(targetUser.id, {
+      type: 'connection_request_received',
+      data: {
+        fromUserName: session.user.name,
+        fromUserEmail: session.user.email,
+      },
+    })
+
     return { message: 'If this email is registered, a connection request has been sent.' }
   })
 
@@ -115,10 +126,32 @@ export const getPendingRequests = createServerFn({ method: 'GET' }).handler(
 )
 
 /**
+ * Get all pending outgoing connection requests sent by the current user.
+ */
+export const getSentRequests = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await requireAuth()
+
+    const requests = await db
+      .select({
+        id: connectionRequests.id,
+        toUserEmail: users.email,
+        createdAt: connectionRequests.createdAt,
+        status: connectionRequests.status,
+      })
+      .from(connectionRequests)
+      .innerJoin(users, eq(users.id, connectionRequests.toUserId))
+      .where(eq(connectionRequests.fromUserId, session.user.id))
+
+    return requests
+  },
+)
+
+/**
  * Accept a connection request: update status and create the couple row.
  */
 export const acceptConnectionRequest = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { requestId: string })
+  .inputValidator(z.object({ requestId: z.string() }))
   .handler(async ({ data }) => {
     const session = await requireAuth()
     const { requestId } = data
@@ -151,6 +184,15 @@ export const acceptConnectionRequest = createServerFn({ method: 'POST' })
       })
     })
 
+    // Notify the sender that their request was accepted
+    emitUserEvent(request.fromUserId, {
+      type: 'connection_request_accepted',
+      data: {
+        acceptedByName: session.user.name,
+        acceptedByEmail: session.user.email,
+      },
+    })
+
     return { success: true }
   })
 
@@ -158,7 +200,7 @@ export const acceptConnectionRequest = createServerFn({ method: 'POST' })
  * Decline a connection request.
  */
 export const declineConnectionRequest = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { requestId: string })
+  .inputValidator(z.object({ requestId: z.string() }))
   .handler(async ({ data }) => {
     const session = await requireAuth()
     const { requestId } = data

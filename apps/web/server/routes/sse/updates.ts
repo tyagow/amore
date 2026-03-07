@@ -7,7 +7,7 @@
  * and streams them as Server-Sent Events. Sends keepalive pings every 30s.
  */
 
-import { defineEventHandler, setResponseHeaders, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { auth } from '../../../src/lib/auth'
 import { db } from '@amore-couples/db'
 import { couples } from '@amore-couples/db/schema'
@@ -37,13 +37,6 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── SSE response ──────────────────────────────────────────────────
-  setResponseHeaders(event, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no', // disable nginx buffering
-  })
-
   const body = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
@@ -87,6 +80,7 @@ export default defineEventHandler(async (event) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   })
 })

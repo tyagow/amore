@@ -8,6 +8,9 @@ import { log } from '../logger.js'
 const ANALYSIS_THRESHOLD = parseInt(process.env.ANALYSIS_THRESHOLD || '50', 10)
 const MOOD_CHECK_INTERVAL = 10
 
+// Prevent concurrent analysis for the same couple
+const analysisInProgress = new Set<string>()
+
 /**
  * Increment the messages-since-analysis counter for a couple.
  * Returns the new count so callers can decide what to trigger.
@@ -36,16 +39,19 @@ export async function checkAndTriggerAnalysis(coupleId: string): Promise<void> {
 
   if (!couple) return
 
-  if (couple.messagesSinceAnalysis >= ANALYSIS_THRESHOLD) {
+  if (couple.messagesSinceAnalysis >= ANALYSIS_THRESHOLD && !analysisInProgress.has(coupleId)) {
     log.info(
       { coupleId, messageCount: couple.messagesSinceAnalysis },
       'Analysis threshold reached, triggering pipeline',
     )
 
+    analysisInProgress.add(coupleId)
     // Fire-and-forget — don't block message ingest
-    runAnalysis(coupleId).catch((err) => {
-      log.error({ err, coupleId }, 'Analysis pipeline failed')
-    })
+    runAnalysis(coupleId)
+      .catch((err) => {
+        log.error({ err, coupleId }, 'Analysis pipeline failed')
+      })
+      .finally(() => analysisInProgress.delete(coupleId))
   }
 }
 
@@ -96,7 +102,8 @@ export async function checkAndTriggerMoodDetection(
         coupleId,
         userId: senderId,
         mood: result.mood,
-        source: 'auto',
+        source: 'ai_detected',
+        visibility: 'silent',
         note: result.reason,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h expiry
       })

@@ -129,7 +129,7 @@ function GoalsPage() {
         data: {
           title: suggestion.title,
           description: suggestion.description,
-          source: 'ai',
+          source: 'ai_suggested',
         },
       })
       setActiveGoals((prev) => [result.goal, ...prev])
@@ -353,7 +353,7 @@ function GoalsPage() {
                     </p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    {goal.source === 'ai' && (
+                    {goal.source === 'ai_suggested' && (
                       <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
                         AI suggested
                       </span>

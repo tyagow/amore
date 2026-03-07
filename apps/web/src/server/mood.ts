@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import { moodStates } from '@amore-couples/db/schema'
@@ -13,12 +14,11 @@ import { emitCoupleEvent } from '~/lib/events'
  */
 export const setMood = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) =>
-      d as {
-        mood: 'great' | 'good' | 'neutral' | 'low' | 'struggling'
-        visibility: 'silent' | 'visible' | 'alert'
-        note?: string
-      },
+    z.object({
+      mood: z.enum(['great', 'good', 'neutral', 'low', 'struggling']),
+      visibility: z.enum(['silent', 'visible', 'alert']),
+      note: z.string().optional(),
+    }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()
@@ -58,18 +58,15 @@ export const setMood = createServerFn({ method: 'POST' })
  * Get the most recent non-expired mood for a specific user in a couple.
  */
 export const getLatestMood = createServerFn({ method: 'GET' })
-  .inputValidator(
-    (d: unknown) => d as { userId: string; coupleId: string },
-  )
-  .handler(async ({ data }) => {
-    await requireCouple() // Auth check
+  .handler(async () => {
+    const { session, couple } = await requireCouple()
 
     const now = new Date()
 
     const mood = await db.query.moodStates.findFirst({
       where: and(
-        eq(moodStates.userId, data.userId),
-        eq(moodStates.coupleId, data.coupleId),
+        eq(moodStates.userId, session.user.id),
+        eq(moodStates.coupleId, couple.id),
         gte(moodStates.expiresAt, now),
       ),
       orderBy: [desc(moodStates.createdAt)],
@@ -82,7 +79,7 @@ export const getLatestMood = createServerFn({ method: 'GET' })
  * Get mood timeline for a couple over the last N days.
  */
 export const getMoodHistory = createServerFn({ method: 'GET' })
-  .inputValidator((d: unknown) => d as { days?: number })
+  .inputValidator(z.object({ days: z.number().optional() }))
   .handler(async ({ data }) => {
     const { couple } = await requireCouple()
 

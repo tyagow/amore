@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import { userRelationshipProfiles, users } from '@amore-couples/db/schema'
@@ -38,15 +39,27 @@ export interface ExtractedProfileData {
  */
 export const writeProfileFromAnalysis = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) =>
-      d as {
-        coupleId: string
-        userId: string
-        extractedData: ExtractedProfileData
-      },
+    z.object({
+      extractedData: z.object({
+        loveLanguages: z.object({
+          primary: z.string(),
+          secondary: z.string().optional(),
+        }).optional(),
+        communicationStyle: z.object({
+          type: z.string(),
+          description: z.string(),
+        }).optional(),
+        interests: z.object({
+          items: z.array(z.string()),
+        }).optional(),
+      }),
+    }),
   )
   .handler(async ({ data }) => {
-    const { coupleId, userId, extractedData } = data
+    const { couple, session } = await requireCouple()
+    const coupleId = couple.id
+    const userId = session.user.id
+    const { extractedData } = data
 
     // Check for existing profile to preserve manual overrides
     const existing = await db.query.userRelationshipProfiles.findFirst({
@@ -187,12 +200,19 @@ export const getPartnerProfile = createServerFn({ method: 'GET' }).handler(
  */
 export const updateProfile = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) =>
-      d as {
-        loveLanguages?: { primary: string; secondary?: string }
-        communicationStyle?: { type: string; description: string }
-        interests?: { items: string[] }
-      },
+    z.object({
+      loveLanguages: z.object({
+        primary: z.string(),
+        secondary: z.string().optional(),
+      }).optional(),
+      communicationStyle: z.object({
+        type: z.string(),
+        description: z.string(),
+      }).optional(),
+      interests: z.object({
+        items: z.array(z.string()),
+      }).optional(),
+    }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()

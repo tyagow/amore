@@ -22,3 +22,25 @@ export function subscribeCoupleEvents(
   emitter.on(`couple:${coupleId}`, handler)
   return () => emitter.off(`couple:${coupleId}`, handler)
 }
+
+// ── User-scoped events (for pre-couple notifications) ────
+
+export type UserEventType = 'connection_request_received' | 'connection_request_accepted'
+
+export interface UserEvent {
+  type: UserEventType
+  data: Record<string, unknown>
+}
+
+export function emitUserEvent(userId: string, event: UserEvent) {
+  emitter.emit(`user:${userId}`, event)
+}
+
+export function subscribeUserEvents(
+  userId: string,
+  callback: (event: UserEvent) => void,
+): () => void {
+  const handler = (event: UserEvent) => callback(event)
+  emitter.on(`user:${userId}`, handler)
+  return () => emitter.off(`user:${userId}`, handler)
+}

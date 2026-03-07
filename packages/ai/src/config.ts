@@ -82,13 +82,7 @@ export async function withRetry<T>(
   let lastError: unknown
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 60_000)
-      try {
-        return await fn()
-      } finally {
-        clearTimeout(timeout)
-      }
+      return await fn()
     } catch (err) {
       lastError = err
       // Never retry parse errors — retrying won't change the response format

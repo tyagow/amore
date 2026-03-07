@@ -1,4 +1,4 @@
-const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9942'
+const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9945'
 const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || ''
 
 async function bridgeFetch(path: string, options: RequestInit = {}) {
@@ -52,10 +52,11 @@ export async function setBridgeContact(
   sessionId: string,
   contactJid: string,
   coupleId: string,
+  partnerUserId: string,
 ): Promise<{ status: string }> {
   return bridgeFetch(`/sessions/${encodeURIComponent(sessionId)}/contact`, {
     method: 'POST',
-    body: JSON.stringify({ contactJid, coupleId }),
+    body: JSON.stringify({ contactJid, coupleId, partnerUserId }),
   })
 }
 

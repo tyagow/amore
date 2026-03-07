@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import QRCode from 'qrcode'
 import {
   createWaSession,
   pollWaSession,
@@ -34,6 +35,7 @@ function WhatsAppPage() {
     return { phase: 'idle' }
   })
   const [loading, setLoading] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopPolling = useCallback(() => {
@@ -62,6 +64,15 @@ function WhatsAppPage() {
     },
     [stopPolling],
   )
+
+  // Convert raw QR string to data URL for display
+  useEffect(() => {
+    if (state.phase === 'qr') {
+      QRCode.toDataURL(state.qr, { width: 256, margin: 2 }).then(setQrDataUrl).catch(() => setQrDataUrl(null))
+    } else {
+      setQrDataUrl(null)
+    }
+  }, [state.phase === 'qr' ? (state as { qr: string }).qr : null])
 
   // If we loaded with a connecting state, start polling immediately
   useEffect(() => {
@@ -149,11 +160,17 @@ function WhatsAppPage() {
         {state.phase === 'qr' && (
           <div className="mb-6 flex flex-col items-center">
             <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-              <img
-                src={`data:image/png;base64,${state.qr}`}
-                alt="WhatsApp QR Code"
-                className="w-64 h-64"
-              />
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt="WhatsApp QR Code"
+                  className="w-64 h-64"
+                />
+              ) : (
+                <div className="w-64 h-64 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-stone-300 border-t-stone-900 rounded-full animate-spin" />
+                </div>
+              )}
             </div>
             <p className="text-sm text-stone-500 text-center">
               Open WhatsApp on your phone, go to{' '}

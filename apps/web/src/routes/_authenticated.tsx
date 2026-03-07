@@ -46,21 +46,31 @@ export const Route = createFileRoute('/_authenticated')({
     const coupleData = await getMyCouple()
     const hasCouple = !!coupleData
 
-    // If no couple and not already on /connect, redirect to /connect
-    if (!hasCouple && location.pathname !== '/connect') {
+    // If no couple and not already on a public path, redirect to /connect
+    const publicPaths = ['/connect', '/setup']
+    if (!hasCouple && !publicPaths.includes(location.pathname)) {
       throw redirect({ to: '/connect' })
     }
 
-    return { session, hasCouple }
+    let pendingRequestCount = 0
+    if (!hasCouple) {
+      const { getPendingRequests } = await import('~/server/connections')
+      const requests = await getPendingRequests()
+      pendingRequestCount = requests.length
+    }
+
+    return { session, hasCouple, pendingRequestCount }
   },
   component: AuthenticatedLayout,
   errorComponent: AuthErrorComponent,
 })
 
 function AuthenticatedLayout() {
+  const { pendingRequestCount } = Route.useRouteContext()
+
   return (
     <div className="min-h-screen bg-stone-50">
-      <Nav />
+      <Nav pendingRequestCount={pendingRequestCount} />
 
       {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
       <div className="md:ml-64 pb-20 md:pb-0">

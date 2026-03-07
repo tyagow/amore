@@ -4,12 +4,8 @@ import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { WebSocketServer, WebSocket } from 'ws'
 import { Pool } from 'pg'
-import { sql, eq } from 'drizzle-orm'
-import { db } from '@amore-couples/db/client'
-import { couples } from '@amore-couples/db/schema'
 import { SessionManager } from './sessions/manager.js'
 import { extractMessageText } from './messages/ingest.js'
-import { runAnalysis } from './analysis/run.js'
 import { log } from './logger.js'
 
 // Validate required env vars
@@ -19,7 +15,7 @@ if (!WA_BRIDGE_SECRET) {
   process.exit(1)
 }
 
-const PORT = parseInt(process.env.WA_BRIDGE_PORT || '9942')
+const PORT = parseInt(process.env.PORT || process.env.WA_BRIDGE_PORT || '9945')
 const WEB_APP_URL = process.env.WEB_APP_URL || 'http://localhost:9941'
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const manager = new SessionManager(pool)
@@ -46,48 +42,9 @@ app.use('/sessions', bearerAuth({ token: WA_BRIDGE_SECRET }))
 // Track cumulative persisted message counts per couple
 const messageCounts = new Map<string, number>()
 
-// Prevent concurrent analysis for the same couple
-const analysisInProgress = new Set<string>()
-
-manager.on('messages-persisted', async ({ sessionId, coupleId, count }: { sessionId: string; coupleId: string; count: number }) => {
+manager.on('messages-persisted', ({ sessionId, coupleId, count }: { sessionId: string; coupleId: string; count: number }) => {
   messageCounts.set(coupleId, (messageCounts.get(coupleId) ?? 0) + count)
   broadcast(sessionId, { type: 'messages-persisted', data: { coupleId, count, total: messageCounts.get(coupleId) ?? 0 } })
-
-  // Auto-trigger analysis when threshold is reached
-  try {
-    const [couple] = await db
-      .update(couples)
-      .set({
-        messagesSinceAnalysis: sql`${couples.messagesSinceAnalysis} + ${count}`,
-      })
-      .where(eq(couples.id, coupleId))
-      .returning({
-        messagesSinceAnalysis: couples.messagesSinceAnalysis,
-        lastAnalyzed: couples.lastAnalyzed,
-      })
-
-    if (!couple) return
-
-    const threshold = couple.lastAnalyzed === null ? 50 : 200
-
-    if (couple.messagesSinceAnalysis >= threshold && !analysisInProgress.has(coupleId)) {
-      analysisInProgress.add(coupleId)
-      runAnalysis(coupleId)
-        .then(() => {
-          broadcast(sessionId, { type: 'analysis-complete', data: { coupleId } })
-        })
-        .catch((err) => {
-          log.error({ err, coupleId }, 'Auto-analysis failed')
-          broadcast(sessionId, {
-            type: 'analysis-failed',
-            data: { coupleId, error: 'Analysis failed. Will retry on next message batch.' },
-          })
-        })
-        .finally(() => analysisInProgress.delete(coupleId))
-    }
-  } catch (err) {
-    log.error({ err, coupleId }, 'Auto-analysis threshold check failed')
-  }
 })
 
 // WebSocket clients per session

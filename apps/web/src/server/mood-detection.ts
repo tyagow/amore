@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import { insights, messages, moodStates, users } from '@amore-couples/db/schema'
@@ -24,11 +25,10 @@ interface MoodDetectionContent {
  * Fetches recent messages, runs AI mood detection, and stores result as an insight.
  */
 export const triggerMoodDetection = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (d: unknown) => d as { coupleId: string; userId: string },
-  )
-  .handler(async ({ data }) => {
-    const { coupleId, userId } = data
+  .handler(async () => {
+    const { couple, session } = await requireCouple()
+    const coupleId = couple.id
+    const userId = session.user.id
 
     // Fetch recent messages for this couple
     const recentMessages = await db.query.messages.findMany({
@@ -132,11 +132,10 @@ export const getPendingMoodDetections = createServerFn({ method: 'GET' }).handle
  */
 export const confirmMoodDetection = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) =>
-      d as {
-        detectionId: string
-        visibility: 'silent' | 'visible' | 'alert'
-      },
+    z.object({
+      detectionId: z.string(),
+      visibility: z.enum(['silent', 'visible', 'alert']),
+    }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()
@@ -208,7 +207,7 @@ export const confirmMoodDetection = createServerFn({ method: 'POST' })
  */
 export const dismissMoodDetection = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) => d as { detectionId: string },
+    z.object({ detectionId: z.string() }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()

@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: amore_dev_password
       POSTGRES_DB: amore_couples
     ports:
-      - "5433:5432"
+      - "5440:5432"
     volumes:
       - amore_couples_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
     image: redis:7-alpine
     container_name: amore-couples-redis
     ports:
-      - "6380:6379"
+      - "6381:6379"
     volumes:
       - amore_couples_redis:/data
     healthcheck:

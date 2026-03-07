@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import { coupleGoals, insights } from '@amore-couples/db/schema'
@@ -14,13 +15,12 @@ import { FAST_MODEL, parseAIResponse } from '@amore-couples/ai/config'
  */
 export const createGoal = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: unknown) =>
-      d as {
-        title: string
-        description?: string
-        dueDate?: string
-        source?: 'user' | 'ai'
-      },
+    z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      dueDate: z.string().optional(),
+      source: z.enum(['user', 'ai_suggested']).optional(),
+    }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()
@@ -89,7 +89,7 @@ export const getCompletedGoals = createServerFn({ method: 'GET' }).handler(
  * Mark a goal as completed.
  */
 export const completeGoal = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { goalId: string })
+  .inputValidator(z.object({ goalId: z.string() }))
   .handler(async ({ data }) => {
     const { couple } = await requireCouple()
 
@@ -120,7 +120,7 @@ export const completeGoal = createServerFn({ method: 'POST' })
  * Dismiss a goal (mark as dismissed).
  */
 export const dismissGoal = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => d as { goalId: string })
+  .inputValidator(z.object({ goalId: z.string() }))
   .handler(async ({ data }) => {
     const { couple } = await requireCouple()
 

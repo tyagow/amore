@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { authClient } from '~/lib/auth-client'
 
 export const Route = createFileRoute('/_authenticated/setup')({
   component: SetupPage,
@@ -14,8 +15,15 @@ function SetupPage() {
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // TODO: persist display name update via API
-    navigate({ to: '/connect' as string })
+    try {
+      await authClient.updateUser({ name: displayName.trim() })
+      navigate({ to: '/connect' as string })
+    } catch {
+      // If update fails, still navigate -- name can be updated later
+      navigate({ to: '/connect' as string })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
