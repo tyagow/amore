@@ -37,7 +37,13 @@ export const createWaSession = createServerFn({
     if (!session) throw new Error('Unauthorized')
 
     const userId = session.user.id
-    await resolveCouple(userId) // ensure user is in a couple
+    console.log('[wa-session] createWaSession called for user:', userId)
+    try {
+      await resolveCouple(userId) // ensure user is in a couple
+    } catch (err) {
+      console.error('[wa-session] resolveCouple failed:', err instanceof Error ? err.message : err)
+      throw err
+    }
 
     const bridgeSessionId = userId
 
@@ -85,6 +91,7 @@ export const createWaSession = createServerFn({
     }
 
     // No existing session -- create a new one
+    console.log('[wa-session] creating new wa_session row for user:', userId)
     const [waSession] = await db
       .insert(waSessions)
       .values({
@@ -95,8 +102,11 @@ export const createWaSession = createServerFn({
       .returning()
 
     try {
+      console.log('[wa-session] calling createBridgeSession:', bridgeSessionId)
       await createBridgeSession(bridgeSessionId)
+      console.log('[wa-session] bridge session created successfully')
     } catch (err) {
+      console.error('[wa-session] createBridgeSession failed:', err instanceof Error ? err.message : err)
       await db
         .update(waSessions)
         .set({ status: 'disconnected' })
