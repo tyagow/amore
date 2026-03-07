@@ -22,4 +22,4 @@ COPY apps/wa-bridge/ ./apps/wa-bridge/
 COPY tsconfig.base.json ./
 EXPOSE 3000
 ENV PORT=3000
-CMD ["npx", "tsx", "apps/wa-bridge/src/index.ts"]
+CMD ["node", "apps/wa-bridge/scripts/start.mjs"]

@@ -22,7 +22,12 @@ RUN pnpm --filter @amore-couples/web build
 
 # Run
 FROM base AS runner
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=build /app/apps/web/.output ./apps/web/.output
+COPY packages/db/drizzle ./packages/db/drizzle
+COPY packages/db/scripts/run-migrations.mjs ./packages/db/scripts/run-migrations.mjs
+COPY apps/web/scripts/start.mjs ./apps/web/scripts/start.mjs
 EXPOSE 3000
 ENV PORT=3000
-CMD ["node", "apps/web/.output/server/index.mjs"]
+CMD ["node", "apps/web/scripts/start.mjs"]
