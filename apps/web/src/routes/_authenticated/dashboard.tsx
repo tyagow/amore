@@ -1,24 +1,24 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
-import { getDashboardData } from '~/server/dashboard'
+import { getIntelligence } from '~/server/intelligence'
 import { getActiveCoaching } from '~/server/coaching'
 import { getPendingMoodDetections } from '~/server/mood-detection'
-import { HealthRing } from './-components/health-ring'
-import { MoodCard } from './-components/mood-card'
+import { CoupleHero } from './-components/couple-hero'
 import { MoodSelector } from './-components/mood-selector'
 import { GoalsCard } from './-components/goals-card'
 import { InsightsCard } from './-components/insights-card'
 import { CoachingCard } from './-components/coaching-card'
+import { PatternCards } from './-components/pattern-cards'
 import { MoodDetectionModal } from './-components/mood-detection-modal'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   loader: async () => {
-    const [dashboardData, activeCoaching, pendingMoodDetections] = await Promise.all([
-      getDashboardData(),
+    const [intelligence, activeCoaching, pendingMoodDetections] = await Promise.all([
+      getIntelligence(),
       getActiveCoaching(),
       getPendingMoodDetections(),
     ])
-    return { ...dashboardData, activeCoaching, pendingMoodDetections }
+    return { ...intelligence, activeCoaching, pendingMoodDetections }
   },
   component: DashboardPage,
 })
@@ -31,46 +31,34 @@ function DashboardPage() {
   )
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-900">
-          {data.userName ? `Hey, ${data.userName}` : 'Dashboard'}
-        </h1>
-        <p className="text-stone-500 mt-1">
-          {data.partner?.name
-            ? `You & ${data.partner.name}`
-            : 'Your relationship at a glance'}
-        </p>
-      </div>
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <CoupleHero
+        userName={data.userName}
+        partnerName={data.partner?.name ?? null}
+        healthScore={data.couple.healthScore}
+        lastAnalyzed={data.couple.lastAnalyzed}
+        messagesSinceAnalysis={data.couple.messagesSinceAnalysis}
+        myMood={data.myMood}
+        partnerMood={data.partnerMood}
+        sentimentByDay={data.sentimentByDay}
+      />
 
-      {/* Health Ring — prominent at top */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 mb-6 flex justify-center">
-        <HealthRing score={data.couple.healthScore} />
-      </div>
+      <MoodSelector onMoodSet={() => router.invalidate()} />
 
-      {/* Mood Selector — set your mood */}
-      <div className="mb-6">
-        <MoodSelector onMoodSet={() => router.invalidate()} />
-      </div>
-
-      {/* Coaching Card — shown when partner has an alert mood */}
       {data.activeCoaching.length > 0 && (
         <CoachingCard coaching={data.activeCoaching} />
       )}
 
-      {/* Cards grid — 2 columns on desktop, 1 on mobile */}
+      <PatternCards
+        sentimentByDay={data.sentimentByDay}
+        messageStats={data.messageStats}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <MoodCard
-          myMood={data.myMood}
-          partnerMood={data.partnerMood}
-          partnerName={data.partner?.name ?? null}
-        />
-        <GoalsCard goals={data.activeGoals} />
         <InsightsCard insights={data.recentInsights} />
+        <GoalsCard goals={data.activeGoals} />
       </div>
 
-      {/* AI mood detection floating notification */}
       {showMoodDetections && data.pendingMoodDetections.length > 0 && (
         <MoodDetectionModal
           detections={data.pendingMoodDetections}

@@ -6,6 +6,7 @@ import { detectMoodShift } from '@amore-couples/ai'
 import { log } from '../logger.js'
 
 const ANALYSIS_THRESHOLD = parseInt(process.env.ANALYSIS_THRESHOLD || '50', 10)
+const MIN_FIRST_ANALYSIS = 20 // Lower bar for first-ever analysis (history sync)
 const MOOD_CHECK_INTERVAL = 10
 
 // Prevent concurrent analysis for the same couple
@@ -29,20 +30,27 @@ export async function incrementMessageCounter(coupleId: string, count: number): 
 
 /**
  * Check if the analysis threshold has been reached and trigger the pipeline.
+ * Triggers immediately on first-ever analysis (lastAnalyzed is null).
  * Fire-and-forget — does not block the caller.
  */
 export async function checkAndTriggerAnalysis(coupleId: string): Promise<void> {
   const couple = await db.query.couples.findFirst({
     where: eq(couples.id, coupleId),
-    columns: { messagesSinceAnalysis: true },
+    columns: { messagesSinceAnalysis: true, lastAnalyzed: true },
   })
 
   if (!couple) return
 
-  if (couple.messagesSinceAnalysis >= ANALYSIS_THRESHOLD && !analysisInProgress.has(coupleId)) {
+  // First-ever analysis: trigger immediately once we have enough messages (skip threshold)
+  const isFirstAnalysis = couple.lastAnalyzed === null
+  const shouldTrigger = isFirstAnalysis
+    ? couple.messagesSinceAnalysis >= MIN_FIRST_ANALYSIS
+    : couple.messagesSinceAnalysis >= ANALYSIS_THRESHOLD
+
+  if (shouldTrigger && !analysisInProgress.has(coupleId)) {
     log.info(
-      { coupleId, messageCount: couple.messagesSinceAnalysis },
-      'Analysis threshold reached, triggering pipeline',
+      { coupleId, messageCount: couple.messagesSinceAnalysis, isFirstAnalysis },
+      isFirstAnalysis ? 'First analysis: triggering on history sync' : 'Analysis threshold reached, triggering pipeline',
     )
 
     analysisInProgress.add(coupleId)
