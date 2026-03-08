@@ -35,9 +35,10 @@ app.use(
 // Health endpoint (unprotected, before auth middleware)
 app.get('/health', (c) => c.json({ ok: true }))
 
-// Bearer token auth on all /sessions routes
+// Bearer token auth on all /sessions and /analysis routes
 app.use('/sessions/*', bearerAuth({ token: WA_BRIDGE_SECRET }))
 app.use('/sessions', bearerAuth({ token: WA_BRIDGE_SECRET }))
+app.use('/analysis/*', bearerAuth({ token: WA_BRIDGE_SECRET }))
 
 // Track cumulative persisted message counts per couple
 const messageCounts = new Map<string, number>()
@@ -248,6 +249,22 @@ app.delete('/sessions/:id', async (c) => {
     return c.json({ status: 'deleted' })
   } catch (err) {
     log.error({ err }, 'DELETE /sessions/:id failed')
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
+// Manual analysis trigger
+app.post('/analysis/:coupleId', async (c) => {
+  try {
+    const coupleId = c.req.param('coupleId')
+    const { runAnalysis } = await import('./analysis/run.js')
+    // Fire and forget — return immediately
+    runAnalysis(coupleId)
+      .then(() => log.info({ coupleId }, 'Manual analysis completed'))
+      .catch((err) => log.error({ err, coupleId }, 'Manual analysis failed'))
+    return c.json({ status: 'analysis_started', coupleId })
+  } catch (err) {
+    log.error({ err }, 'POST /analysis/:coupleId failed')
     return c.json({ error: 'Internal server error' }, 500)
   }
 })

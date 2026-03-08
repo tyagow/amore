@@ -70,3 +70,11 @@ export async function sendBridgeMessage(
     body: JSON.stringify({ jid, text }),
   })
 }
+
+export async function triggerBridgeAnalysis(
+  coupleId: string,
+): Promise<{ status: string }> {
+  return bridgeFetch(`/analysis/${encodeURIComponent(coupleId)}`, {
+    method: 'POST',
+  })
+}

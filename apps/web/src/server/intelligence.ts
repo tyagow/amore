@@ -9,6 +9,7 @@ import {
   coupleGoals,
 } from '@amore-couples/db/schema'
 import { eq, and, desc, inArray, sql } from 'drizzle-orm'
+import { triggerBridgeAnalysis } from '~/lib/wa-bridge'
 
 /**
  * Unified intelligence data shared across dashboard and chat.
@@ -175,6 +176,26 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
         }),
       ),
       messageStats,
+    }
+  },
+)
+
+/**
+ * Manually trigger the analysis pipeline for the authenticated user's couple.
+ * Used when the dashboard has no health score yet (first-time setup).
+ */
+export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const { couple } = await requireCouple()
+
+    try {
+      await triggerBridgeAnalysis(couple.id)
+      return { status: 'analysis_started', coupleId: couple.id }
+    } catch (err) {
+      return {
+        status: 'error',
+        error: err instanceof Error ? err.message : 'Failed to trigger analysis',
+      }
     }
   },
 )
