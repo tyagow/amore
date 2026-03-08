@@ -148,14 +148,14 @@ function GoalsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Goals</h1>
-          <p className="text-stone-500 mt-1">
+          <h1 className="font-display text-3xl text-warm-900">Goals</h1>
+          <p className="text-warm-500 mt-1">
             Things you want to work on together
           </p>
         </div>
         <Link
           to="/dashboard"
-          className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
+          className="text-sm text-warm-500 hover:text-warm-700 transition-colors"
         >
           Back to Dashboard
         </Link>
@@ -172,14 +172,14 @@ function GoalsPage() {
       <div className="flex gap-3 mb-6">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg font-medium hover:bg-stone-800 transition-colors"
+          className="px-4 py-2 bg-coral-500 text-white text-sm rounded-lg font-medium hover:bg-coral-600 transition-colors"
         >
           {showAddForm ? 'Cancel' : 'Add Goal'}
         </button>
         <button
           onClick={handleGetSuggestions}
           disabled={loadingSuggestions}
-          className="px-4 py-2 border border-stone-300 text-stone-700 text-sm rounded-lg font-medium hover:bg-stone-50 disabled:opacity-50 transition-colors"
+          className="px-4 py-2 border border-coral-200 text-coral-700 text-sm rounded-lg font-medium hover:bg-coral-50 disabled:opacity-50 transition-colors"
         >
           {loadingSuggestions ? (
             <span className="flex items-center gap-2">
@@ -212,15 +212,15 @@ function GoalsPage() {
 
       {/* Add Goal Form */}
       {showAddForm && (
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
-          <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide mb-4">
+        <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 mb-6">
+          <h2 className="font-display text-base text-warm-800 mb-4">
             New Goal
           </h2>
           <form onSubmit={handleAddGoal} className="space-y-4">
             <div>
               <label
                 htmlFor="goalTitle"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="block text-sm font-medium text-warm-700 mb-1"
               >
                 Title
               </label>
@@ -230,47 +230,47 @@ function GoalsPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-warm-300 rounded-lg text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
                 placeholder="e.g. Weekly date night"
               />
             </div>
             <div>
               <label
                 htmlFor="goalDescription"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="block text-sm font-medium text-warm-700 mb-1"
               >
                 Description{' '}
-                <span className="text-stone-400 font-normal">(optional)</span>
+                <span className="text-warm-400 font-normal">(optional)</span>
               </label>
               <textarea
                 id="goalDescription"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-warm-300 rounded-lg text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent resize-none"
                 placeholder="What does this goal look like?"
               />
             </div>
             <div>
               <label
                 htmlFor="goalDueDate"
-                className="block text-sm font-medium text-stone-700 mb-1"
+                className="block text-sm font-medium text-warm-700 mb-1"
               >
                 Due Date{' '}
-                <span className="text-stone-400 font-normal">(optional)</span>
+                <span className="text-warm-400 font-normal">(optional)</span>
               </label>
               <input
                 id="goalDueDate"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-warm-300 rounded-lg text-warm-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
               />
             </div>
             <button
               type="submit"
               disabled={submitting || !title.trim()}
-              className="w-full py-2.5 bg-stone-900 text-white rounded-lg font-medium hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-2.5 bg-coral-500 text-white rounded-lg font-medium hover:bg-coral-600 focus:outline-none focus:ring-2 focus:ring-coral-300 shadow-sm shadow-coral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? 'Adding...' : 'Add Goal'}
             </button>
@@ -281,7 +281,7 @@ function GoalsPage() {
       {/* AI Suggestions */}
       {suggestions.length > 0 && (
         <div className="mb-6 space-y-3">
-          <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
+          <h2 className="font-display text-base text-warm-800">
             AI Suggestions
           </h2>
           {suggestions.map((suggestion) => (
@@ -291,10 +291,10 @@ function GoalsPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-stone-900">
+                  <p className="text-sm font-medium text-warm-900">
                     {suggestion.title}
                   </p>
-                  <p className="text-sm text-stone-600 mt-1">
+                  <p className="text-sm text-warm-600 mt-1">
                     {suggestion.description}
                   </p>
                   <p className="text-xs text-amber-700 mt-2 italic">
@@ -305,13 +305,13 @@ function GoalsPage() {
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => handleAcceptSuggestion(suggestion)}
-                  className="px-3 py-1.5 bg-stone-900 text-white text-xs rounded-lg font-medium hover:bg-stone-800 transition-colors"
+                  className="px-3 py-1.5 bg-coral-500 text-white text-xs rounded-lg font-medium hover:bg-coral-600 transition-colors"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => handleDismissSuggestion(suggestion)}
-                  className="px-3 py-1.5 border border-stone-300 text-stone-600 text-xs rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                  className="px-3 py-1.5 border border-warm-300 text-warm-600 text-xs rounded-lg font-medium hover:bg-warm-50 transition-colors"
                 >
                   Dismiss
                 </button>
@@ -322,8 +322,8 @@ function GoalsPage() {
       )}
 
       {/* Active Goals */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 mb-6">
-        <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide mb-4">
+      <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 mb-6">
+        <h2 className="font-display text-base text-warm-800 mb-4">
           Active Goals
         </h2>
         {activeGoals.length > 0 ? (
@@ -336,19 +336,19 @@ function GoalsPage() {
                 <button
                   onClick={() => handleComplete(goal.id)}
                   disabled={processingId === goal.id}
-                  className="mt-0.5 w-5 h-5 rounded-full border-2 border-stone-300 flex-shrink-0 flex items-center justify-center hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                  className="mt-0.5 w-5 h-5 rounded-full border-2 border-warm-300 flex-shrink-0 flex items-center justify-center hover:border-emerald-500 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
                   title="Mark complete"
                 >
                   {processingId === goal.id && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-stone-300 animate-pulse" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-warm-300 animate-pulse" />
                   )}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-stone-900 leading-tight">
+                  <p className="text-sm font-medium text-warm-900 leading-tight">
                     {goal.title}
                   </p>
                   {goal.description && (
-                    <p className="text-xs text-stone-400 mt-0.5">
+                    <p className="text-xs text-warm-400 mt-0.5">
                       {goal.description}
                     </p>
                   )}
@@ -359,7 +359,7 @@ function GoalsPage() {
                       </span>
                     )}
                     {goal.dueDate && (
-                      <span className="text-[10px] text-stone-400">
+                      <span className="text-[10px] text-warm-400">
                         Due{' '}
                         {new Date(goal.dueDate).toLocaleDateString('en-US', {
                           month: 'short',
@@ -372,7 +372,7 @@ function GoalsPage() {
                 <button
                   onClick={() => handleDismiss(goal.id)}
                   disabled={processingId === goal.id}
-                  className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-stone-500 disabled:opacity-50 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 text-warm-300 hover:text-warm-500 disabled:opacity-50 transition-opacity"
                   title="Dismiss goal"
                 >
                   <svg
@@ -394,7 +394,7 @@ function GoalsPage() {
           </ul>
         ) : (
           <div className="text-center py-8">
-            <p className="text-sm text-stone-400">
+            <p className="text-sm text-warm-400">
               No active goals yet. Add one above or get AI suggestions.
             </p>
           </div>
@@ -403,16 +403,16 @@ function GoalsPage() {
 
       {/* Completed Goals (Collapsible) */}
       {completedGoals.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+        <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
           <button
             onClick={() => setShowCompleted(!showCompleted)}
             className="flex items-center justify-between w-full"
           >
-            <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
+            <h2 className="font-display text-base text-warm-800">
               Completed ({completedGoals.length})
             </h2>
             <svg
-              className={`w-4 h-4 text-stone-400 transition-transform ${showCompleted ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 text-warm-400 transition-transform ${showCompleted ? 'rotate-180' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
@@ -434,11 +434,11 @@ function GoalsPage() {
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-stone-400 leading-tight line-through">
+                    <p className="text-sm font-medium text-warm-400 leading-tight line-through">
                       {goal.title}
                     </p>
                     {goal.description && (
-                      <p className="text-xs text-stone-300 mt-0.5">
+                      <p className="text-xs text-warm-300 mt-0.5">
                         {goal.description}
                       </p>
                     )}

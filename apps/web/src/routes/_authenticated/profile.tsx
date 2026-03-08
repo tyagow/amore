@@ -46,7 +46,7 @@ function SourceBadge({ source }: { source: 'ai' | 'manual' }) {
     )
   }
   return (
-    <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
+    <span className="text-[10px] font-medium text-warm-500 bg-warm-100 px-1.5 py-0.5 rounded">
       Manual
     </span>
   )
@@ -54,7 +54,7 @@ function SourceBadge({ source }: { source: 'ai' | 'manual' }) {
 
 function EmptyField({ label }: { label: string }) {
   return (
-    <p className="text-sm text-stone-400 italic">
+    <p className="text-sm text-warm-400 italic">
       No {label} data yet. Edit your profile or run an AI analysis.
     </p>
   )
@@ -188,16 +188,16 @@ function ProfilePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">
+          <h1 className="font-display text-3xl text-warm-900">
             Relationship Profile
           </h1>
-          <p className="text-stone-500 mt-1">
+          <p className="text-warm-500 mt-1">
             How you show up in your relationship
           </p>
         </div>
         <Link
           to="/dashboard"
-          className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
+          className="text-sm text-warm-500 hover:text-warm-700 transition-colors"
         >
           Back to Dashboard
         </Link>
@@ -212,15 +212,15 @@ function ProfilePage() {
 
       {/* ── Your Profile ─────────────────────────────────── */}
       <div className="space-y-6 mb-10">
-        <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
+        <h2 className="font-display text-base text-warm-800">
           Your Profile
         </h2>
 
         {/* Love Languages */}
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+        <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-stone-900">
+              <h3 className="text-sm font-semibold text-warm-900">
                 Love Languages
               </h3>
               {loveLanguages?.source && (
@@ -230,7 +230,7 @@ function ProfilePage() {
             {editing !== 'love-languages' && (
               <button
                 onClick={startEditLoveLanguages}
-                className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+                className="text-xs text-coral-500 hover:text-coral-600 transition-colors"
               >
                 Edit
               </button>
@@ -240,13 +240,13 @@ function ProfilePage() {
           {editing === 'love-languages' ? (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
+                <label className="block text-xs font-medium text-warm-600 mb-1">
                   Primary
                 </label>
                 <select
                   value={editLovePrimary}
                   onChange={(e) => setEditLovePrimary(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
                 >
                   <option value="">Select...</option>
                   {LOVE_LANGUAGES.map((lang) => (
@@ -257,14 +257,14 @@ function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
+                <label className="block text-xs font-medium text-warm-600 mb-1">
                   Secondary{' '}
-                  <span className="text-stone-400 font-normal">(optional)</span>
+                  <span className="text-warm-400 font-normal">(optional)</span>
                 </label>
                 <select
                   value={editLoveSecondary}
                   onChange={(e) => setEditLoveSecondary(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
                 >
                   <option value="">None</option>
                   {LOVE_LANGUAGES.filter((l) => l !== editLovePrimary).map(
@@ -280,13 +280,13 @@ function ProfilePage() {
                 <button
                   onClick={saveLoveLanguages}
                   disabled={saving || !editLovePrimary}
-                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg font-medium hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-coral-500 text-white text-sm rounded-lg font-medium hover:bg-coral-600 disabled:opacity-50 transition-colors"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="px-4 py-2 border border-stone-300 text-stone-700 text-sm rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                  className="px-4 py-2 border border-coral-200 text-coral-700 text-sm rounded-lg font-medium hover:bg-coral-50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -294,13 +294,13 @@ function ProfilePage() {
             </div>
           ) : loveLanguages ? (
             <div className="space-y-1">
-              <p className="text-sm text-stone-900">
-                <span className="text-stone-500">Primary:</span>{' '}
+              <p className="text-sm text-warm-900">
+                <span className="text-warm-500">Primary:</span>{' '}
                 {loveLanguages.primary}
               </p>
               {loveLanguages.secondary && (
-                <p className="text-sm text-stone-900">
-                  <span className="text-stone-500">Secondary:</span>{' '}
+                <p className="text-sm text-warm-900">
+                  <span className="text-warm-500">Secondary:</span>{' '}
                   {loveLanguages.secondary}
                 </p>
               )}
@@ -311,10 +311,10 @@ function ProfilePage() {
         </div>
 
         {/* Communication Style */}
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+        <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-stone-900">
+              <h3 className="text-sm font-semibold text-warm-900">
                 Communication Style
               </h3>
               {communicationStyle?.source && (
@@ -324,7 +324,7 @@ function ProfilePage() {
             {editing !== 'communication' && (
               <button
                 onClick={startEditCommunication}
-                className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+                className="text-xs text-coral-500 hover:text-coral-600 transition-colors"
               >
                 Edit
               </button>
@@ -334,7 +334,7 @@ function ProfilePage() {
           {editing === 'communication' ? (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
+                <label className="block text-xs font-medium text-warm-600 mb-1">
                   Style
                 </label>
                 <select
@@ -346,7 +346,7 @@ function ProfilePage() {
                     )
                     if (match) setEditCommDesc(match.description)
                   }}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
                 >
                   <option value="">Select...</option>
                   {COMMUNICATION_STYLES.map((style) => (
@@ -357,14 +357,14 @@ function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
+                <label className="block text-xs font-medium text-warm-600 mb-1">
                   Description
                 </label>
                 <textarea
                   value={editCommDesc}
                   onChange={(e) => setEditCommDesc(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent resize-none"
                   placeholder="Describe your communication style..."
                 />
               </div>
@@ -372,13 +372,13 @@ function ProfilePage() {
                 <button
                   onClick={saveCommunication}
                   disabled={saving || !editCommType}
-                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg font-medium hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-coral-500 text-white text-sm rounded-lg font-medium hover:bg-coral-600 disabled:opacity-50 transition-colors"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="px-4 py-2 border border-stone-300 text-stone-700 text-sm rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                  className="px-4 py-2 border border-coral-200 text-coral-700 text-sm rounded-lg font-medium hover:bg-coral-50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -386,10 +386,10 @@ function ProfilePage() {
             </div>
           ) : communicationStyle ? (
             <div>
-              <p className="text-sm font-medium text-stone-900">
+              <p className="text-sm font-medium text-warm-900">
                 {communicationStyle.type}
               </p>
-              <p className="text-sm text-stone-500 mt-0.5">
+              <p className="text-sm text-warm-500 mt-0.5">
                 {communicationStyle.description}
               </p>
             </div>
@@ -399,10 +399,10 @@ function ProfilePage() {
         </div>
 
         {/* Interests */}
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+        <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-stone-900">
+              <h3 className="text-sm font-semibold text-warm-900">
                 Shared Interests
               </h3>
               {interests?.source && <SourceBadge source={interests.source} />}
@@ -410,7 +410,7 @@ function ProfilePage() {
             {editing !== 'interests' && (
               <button
                 onClick={startEditInterests}
-                className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+                className="text-xs text-coral-500 hover:text-coral-600 transition-colors"
               >
                 Edit
               </button>
@@ -420,9 +420,9 @@ function ProfilePage() {
           {editing === 'interests' ? (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
+                <label className="block text-xs font-medium text-warm-600 mb-1">
                   Interests{' '}
-                  <span className="text-stone-400 font-normal">
+                  <span className="text-warm-400 font-normal">
                     (comma-separated)
                   </span>
                 </label>
@@ -430,7 +430,7 @@ function ProfilePage() {
                   value={editInterests}
                   onChange={(e) => setEditInterests(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent resize-none"
                   placeholder="e.g. Cooking, Hiking, Movies, Music"
                 />
               </div>
@@ -438,13 +438,13 @@ function ProfilePage() {
                 <button
                   onClick={saveInterests}
                   disabled={saving || !editInterests.trim()}
-                  className="px-4 py-2 bg-stone-900 text-white text-sm rounded-lg font-medium hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-coral-500 text-white text-sm rounded-lg font-medium hover:bg-coral-600 disabled:opacity-50 transition-colors"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="px-4 py-2 border border-stone-300 text-stone-700 text-sm rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                  className="px-4 py-2 border border-coral-200 text-coral-700 text-sm rounded-lg font-medium hover:bg-coral-50 transition-colors"
                 >
                   Cancel
                 </button>
@@ -455,7 +455,7 @@ function ProfilePage() {
               {interests.items.map((item) => (
                 <span
                   key={item}
-                  className="px-3 py-1 bg-stone-100 text-stone-700 text-sm rounded-full"
+                  className="px-3 py-1 bg-warm-100 text-warm-700 text-sm rounded-full"
                 >
                   {item}
                 </span>
@@ -469,57 +469,57 @@ function ProfilePage() {
 
       {/* ── Partner's Profile (Read-Only) ────────────────── */}
       <div className="space-y-6">
-        <h2 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
+        <h2 className="font-display text-base text-warm-800">
           {partnerData.partnerName}&rsquo;s Profile
         </h2>
 
         {partnerProfile ? (
           <>
             {/* Partner Love Languages */}
-            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-              <h3 className="text-sm font-semibold text-stone-900 mb-3">
+            <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
+              <h3 className="text-sm font-semibold text-warm-900 mb-3">
                 Love Languages
               </h3>
               {partnerLoveLanguages ? (
                 <div className="space-y-1">
-                  <p className="text-sm text-stone-900">
-                    <span className="text-stone-500">Primary:</span>{' '}
+                  <p className="text-sm text-warm-900">
+                    <span className="text-warm-500">Primary:</span>{' '}
                     {partnerLoveLanguages.primary}
                   </p>
                   {partnerLoveLanguages.secondary && (
-                    <p className="text-sm text-stone-900">
-                      <span className="text-stone-500">Secondary:</span>{' '}
+                    <p className="text-sm text-warm-900">
+                      <span className="text-warm-500">Secondary:</span>{' '}
                       {partnerLoveLanguages.secondary}
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-stone-400 italic">Not set yet</p>
+                <p className="text-sm text-warm-400 italic">Not set yet</p>
               )}
             </div>
 
             {/* Partner Communication Style */}
-            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-              <h3 className="text-sm font-semibold text-stone-900 mb-3">
+            <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
+              <h3 className="text-sm font-semibold text-warm-900 mb-3">
                 Communication Style
               </h3>
               {partnerCommunicationStyle ? (
                 <div>
-                  <p className="text-sm font-medium text-stone-900">
+                  <p className="text-sm font-medium text-warm-900">
                     {partnerCommunicationStyle.type}
                   </p>
-                  <p className="text-sm text-stone-500 mt-0.5">
+                  <p className="text-sm text-warm-500 mt-0.5">
                     {partnerCommunicationStyle.description}
                   </p>
                 </div>
               ) : (
-                <p className="text-sm text-stone-400 italic">Not set yet</p>
+                <p className="text-sm text-warm-400 italic">Not set yet</p>
               )}
             </div>
 
             {/* Partner Interests */}
-            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-              <h3 className="text-sm font-semibold text-stone-900 mb-3">
+            <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
+              <h3 className="text-sm font-semibold text-warm-900 mb-3">
                 Shared Interests
               </h3>
               {partnerInterests && partnerInterests.items.length > 0 ? (
@@ -527,20 +527,20 @@ function ProfilePage() {
                   {partnerInterests.items.map((item) => (
                     <span
                       key={item}
-                      className="px-3 py-1 bg-stone-100 text-stone-700 text-sm rounded-full"
+                      className="px-3 py-1 bg-warm-100 text-warm-700 text-sm rounded-full"
                     >
                       {item}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-stone-400 italic">Not set yet</p>
+                <p className="text-sm text-warm-400 italic">Not set yet</p>
               )}
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 text-center">
-            <p className="text-sm text-stone-400">
+          <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 text-center">
+            <p className="text-sm text-warm-400">
               {partnerData.partnerName} hasn&rsquo;t set up their profile yet.
             </p>
           </div>

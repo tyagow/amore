@@ -52,8 +52,8 @@ function getInsightText(content: unknown): string {
 function TypeBadge({ type }: { type: string }) {
   const style = TYPE_STYLES[type] ?? {
     label: type,
-    bg: 'bg-stone-100',
-    text: 'text-stone-600',
+    bg: 'bg-warm-100',
+    text: 'text-warm-600',
   }
 
   return (
@@ -79,22 +79,27 @@ function formatDate(date: string | Date): string {
 
 export function InsightsCard({ insights }: InsightsCardProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-      <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wide mb-4">
+    <div className="bg-gradient-to-br from-lavender-50 to-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
+      <h3 className="font-display text-base text-warm-800 mb-4">
         Insights
       </h3>
 
       {insights.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-4 border-l-2 border-warm-200">
           {insights.map((insight) => (
-            <div key={insight.id} className="space-y-1.5">
+            <div key={insight.id} className="pl-4 ml-2 relative space-y-1.5">
+              <span className={`absolute -left-[calc(0.5rem+5px)] top-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                insight.severity === 'high' ? 'bg-coral-400' :
+                insight.severity === 'medium' ? 'bg-amber-400' :
+                'bg-warm-300'
+              }`} />
               <div className="flex items-center gap-2">
                 <TypeBadge type={insight.type} />
-                <span className="text-[10px] text-stone-400">
+                <span className="text-[10px] text-warm-400">
                   {formatDate(insight.generatedAt)}
                 </span>
               </div>
-              <p className="text-sm text-stone-700 leading-relaxed line-clamp-2">
+              <p className="text-sm text-warm-700 leading-relaxed line-clamp-2">
                 {getInsightText(insight.content)}
               </p>
             </div>
@@ -102,7 +107,7 @@ export function InsightsCard({ insights }: InsightsCardProps) {
         </div>
       ) : (
         <div className="text-center py-6">
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-warm-400">
             Connect WhatsApp to get relationship insights
           </p>
         </div>

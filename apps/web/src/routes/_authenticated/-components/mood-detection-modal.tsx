@@ -95,17 +95,17 @@ export function MoodDetectionModal({
 
   return (
     <div className="fixed bottom-6 right-6 left-6 md:left-auto md:w-96 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-      <div className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
+      <div className="bg-warm-100 rounded-2xl shadow-lg border border-warm-200 overflow-hidden">
         {/* Header strip */}
-        <div className="bg-stone-50 px-5 py-3 flex items-center justify-between border-b border-stone-100">
-          <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+        <div className="bg-warm-50 px-5 py-3 flex items-center justify-between border-b border-warm-100">
+          <span className="text-xs font-medium text-warm-500 uppercase tracking-wide">
             Mood Check
           </span>
           <button
             type="button"
             onClick={handleDismiss}
             disabled={submitting}
-            className="text-stone-400 hover:text-stone-600 transition-colors text-sm"
+            className="text-warm-400 hover:text-warm-600 transition-colors text-sm"
             aria-label="Dismiss"
           >
             {'\u{2715}'}
@@ -120,12 +120,12 @@ export function MoodDetectionModal({
               <div className="flex items-start gap-3 mb-4">
                 <span className="text-3xl mt-0.5">{emoji}</span>
                 <div>
-                  <p className="text-sm text-stone-800 leading-relaxed">
+                  <p className="text-sm text-warm-800 leading-relaxed">
                     It looks like you might be feeling{' '}
                     <span className="font-semibold">{moodLabel}</span>.
                     {' '}Is that right?
                   </p>
-                  <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">
+                  <p className="text-xs text-warm-400 mt-1.5 leading-relaxed">
                     {detection.reason}
                   </p>
                 </div>
@@ -137,7 +137,7 @@ export function MoodDetectionModal({
                   type="button"
                   onClick={() => setConfirming(true)}
                   disabled={submitting}
-                  className="flex-1 bg-stone-900 text-white text-sm font-medium py-2 rounded-lg hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                  className="flex-1 bg-coral-500 text-white text-sm font-medium py-2 rounded-lg hover:bg-coral-600 disabled:opacity-50 transition-colors"
                 >
                   Yes, that's right
                 </button>
@@ -145,7 +145,7 @@ export function MoodDetectionModal({
                   type="button"
                   onClick={handleDismiss}
                   disabled={submitting}
-                  className="flex-1 border border-stone-200 text-stone-600 text-sm font-medium py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                  className="flex-1 border border-warm-200 text-warm-600 text-sm font-medium py-2 rounded-lg hover:bg-warm-50 disabled:opacity-50 transition-colors"
                 >
                   Not quite
                 </button>
@@ -154,7 +154,7 @@ export function MoodDetectionModal({
           ) : (
             <>
               {/* Visibility picker */}
-              <p className="text-sm text-stone-700 mb-3">
+              <p className="text-sm text-warm-700 mb-3">
                 How would you like to share this?
               </p>
               <div className="space-y-2 mb-4">
@@ -165,14 +165,14 @@ export function MoodDetectionModal({
                     onClick={() => setSelectedVisibility(v.value)}
                     className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
                       selectedVisibility === v.value
-                        ? 'border-stone-400 bg-stone-50'
-                        : 'border-stone-200 hover:border-stone-300'
+                        ? 'border-coral-300 bg-coral-50/50'
+                        : 'border-warm-200 hover:border-warm-300'
                     }`}
                   >
-                    <span className="text-sm font-medium text-stone-800 block">
+                    <span className="text-sm font-medium text-warm-800 block">
                       {v.label}
                     </span>
-                    <span className="text-xs text-stone-400 block">
+                    <span className="text-xs text-warm-400 block">
                       {v.description}
                     </span>
                   </button>
@@ -185,7 +185,7 @@ export function MoodDetectionModal({
                   type="button"
                   onClick={handleConfirm}
                   disabled={submitting || !selectedVisibility}
-                  className="flex-1 bg-stone-900 text-white text-sm font-medium py-2 rounded-lg hover:bg-stone-800 disabled:opacity-50 transition-colors"
+                  className="flex-1 bg-coral-500 text-white text-sm font-medium py-2 rounded-lg hover:bg-coral-600 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? 'Saving...' : 'Confirm'}
                 </button>
@@ -196,7 +196,7 @@ export function MoodDetectionModal({
                     setSelectedVisibility(null)
                   }}
                   disabled={submitting}
-                  className="px-4 border border-stone-200 text-stone-600 text-sm font-medium py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                  className="px-4 border border-warm-200 text-warm-600 text-sm font-medium py-2 rounded-lg hover:bg-warm-50 disabled:opacity-50 transition-colors"
                 >
                   Back
                 </button>

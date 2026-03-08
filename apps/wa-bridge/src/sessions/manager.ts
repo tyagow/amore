@@ -523,6 +523,7 @@ export class SessionManager extends EventEmitter {
         text,
         timestamp: new Date(timestamp * 1000),
         isMedia: false,
+        mediaType: null,
         source: 'baileys',
       }]).catch((err) => log.error({ err, sessionId, jid }, 'Failed to persist sent message'))
 

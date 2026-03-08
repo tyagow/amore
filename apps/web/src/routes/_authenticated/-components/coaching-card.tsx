@@ -39,7 +39,7 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
   const moodDescription = MOOD_LABEL[moodLevel] ?? `feeling ${moodLevel}`
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6">
+    <div className="bg-amber-50 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 mb-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -49,10 +49,10 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
             </span>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-stone-900">
+            <h3 className="text-sm font-semibold text-warm-800">
               {alertPartnerName} might need some support right now
             </h3>
-            <p className="text-xs text-stone-500 mt-0.5">
+            <p className="text-xs text-warm-500 mt-0.5">
               They shared that they&apos;re {moodDescription}
               {moodNote ? ` — "${moodNote}"` : ''}
             </p>
@@ -62,7 +62,7 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
           onClick={() =>
             setDismissed((prev) => new Set([...prev, latest.id]))
           }
-          className="text-stone-400 hover:text-stone-600 transition-colors p-1 -mt-1 -mr-1"
+          className="text-warm-400 hover:text-warm-600 transition-colors p-1 -mt-1 -mr-1"
           aria-label="Dismiss coaching tips"
         >
           <svg
@@ -87,15 +87,15 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
         {tips.map((tip, i) => (
           <div
             key={i}
-            className="bg-white/70 rounded-xl p-4 border border-amber-100"
+            className="bg-warm-50/70 rounded-xl p-4 border border-amber-100"
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                 {tip.category}
               </span>
             </div>
-            <p className="text-sm text-stone-800 leading-relaxed">{tip.tip}</p>
-            <p className="text-xs text-stone-500 mt-1.5 italic">
+            <p className="text-sm text-warm-800 leading-relaxed">{tip.tip}</p>
+            <p className="text-xs text-warm-500 mt-1.5 italic">
               {tip.context}
             </p>
           </div>

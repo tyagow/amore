@@ -1,1 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', Georgia, serif;
+
+  /* Warm neutrals (replace stone-*) */
+  --color-warm-50: #FAF8F5;
+  --color-warm-100: #F3EDE7;
+  --color-warm-200: #E8DFD5;
+  --color-warm-300: #D4C8BA;
+  --color-warm-400: #A89888;
+  --color-warm-500: #8A7A6A;
+  --color-warm-600: #6B5C4E;
+  --color-warm-800: #3D3229;
+  --color-warm-900: #2A2118;
+
+  /* Accent — warm coral */
+  --color-coral-50: #FFF5F0;
+  --color-coral-100: #FFE8DC;
+  --color-coral-200: #FFD0B8;
+  --color-coral-400: #E8845A;
+  --color-coral-500: #C96B4F;
+  --color-coral-600: #A85540;
+
+  /* Semantic tints for cards */
+  --color-sage-50: #F2F7F2;
+  --color-sage-500: #6B9B6B;
+  --color-lavender-50: #F5F0FA;
+  --color-lavender-500: #8B6EAE;
+}
+
+/* Subtle grain texture for warmth */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Card style — no hard borders, soft shadows */
+.card {
+  background: var(--color-warm-100);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px rgba(42, 33, 24, 0.04), 0 4px 12px rgba(42, 33, 24, 0.02);
+}
+
+/* Staggered page-load animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeUp 0.5s ease-out both; }
+
+/* Mood bounce animation */
+@keyframes moodBounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.animate-mood-bounce { animation: moodBounce 0.4s ease-out; }
+
+/* Mood float-up confirmation */
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+.animate-float-up { animation: floatUp 0.6s ease-out forwards; }
+
+/* Sparkline draw animation */
+@keyframes drawLine {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+.animate-draw { animation: drawLine 1.5s ease-out forwards; stroke-dasharray: 1000; }

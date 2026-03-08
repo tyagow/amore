@@ -8,6 +8,8 @@ import {
   createBridgeSession,
   getBridgeSession,
   deleteBridgeSession,
+  getBridgeContacts,
+  setBridgeContact,
 } from '~/lib/wa-bridge'
 import { auth } from '~/lib/auth'
 
@@ -171,7 +173,16 @@ export const getWaSessionStatus = createServerFn({
       ))
       .limit(1)
 
-    return { waSession: waSession ?? null }
+    // Also fetch the couple's whatsappJid so the page knows if contact selection is needed
+    let whatsappJid: string | null = null
+    try {
+      const couple = await resolveCouple(session.user.id)
+      whatsappJid = couple.whatsappJid
+    } catch {
+      // User may not be in a couple yet
+    }
+
+    return { waSession: waSession ?? null, whatsappJid }
   })
 
 export const disconnectWaSession = createServerFn({
@@ -207,4 +218,67 @@ export const disconnectWaSession = createServerFn({
       .where(eq(waSessions.id, waSession.id))
 
     return { status: 'disconnected' }
+  })
+
+export const fetchWaContacts = createServerFn({
+  method: 'GET',
+})
+  .inputValidator(
+    z.object({
+      waSessionId: z.string().uuid(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await auth.api.getSession({ headers: getRequestHeaders() })
+    if (!session) throw new Error('Unauthorized')
+
+    const [waSession] = await db
+      .select()
+      .from(waSessions)
+      .where(eq(waSessions.id, data.waSessionId))
+      .limit(1)
+
+    if (!waSession) throw new Error('Not found')
+    if (waSession.userId !== session.user.id) throw new Error('Not found')
+
+    const result = await getBridgeContacts(waSession.bridgeSessionId)
+    return { contacts: result.contacts }
+  })
+
+export const selectWaContact = createServerFn({
+  method: 'POST',
+})
+  .inputValidator(
+    z.object({
+      waSessionId: z.string().uuid(),
+      contactJid: z.string(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const session = await auth.api.getSession({ headers: getRequestHeaders() })
+    if (!session) throw new Error('Unauthorized')
+
+    const userId = session.user.id
+
+    const [waSession] = await db
+      .select()
+      .from(waSessions)
+      .where(eq(waSessions.id, data.waSessionId))
+      .limit(1)
+
+    if (!waSession) throw new Error('Not found')
+    if (waSession.userId !== userId) throw new Error('Not found')
+
+    const couple = await resolveCouple(userId)
+
+    const partnerId = couple.userAId === userId ? couple.userBId : couple.userAId
+
+    await setBridgeContact(waSession.bridgeSessionId, data.contactJid, couple.id, partnerId)
+
+    await db
+      .update(couples)
+      .set({ whatsappJid: data.contactJid })
+      .where(eq(couples.id, couple.id))
+
+    return { status: 'ok' as const }
   })

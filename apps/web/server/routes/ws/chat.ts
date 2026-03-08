@@ -14,7 +14,7 @@ import {
 } from 'h3'
 import WebSocket from 'ws'
 import { db } from '@amore-couples/db'
-import { waSessions, couples, messages } from '@amore-couples/db/schema'
+import { waSessions, couples, messages, users } from '@amore-couples/db/schema'
 import { eq, or, and, lt, desc } from 'drizzle-orm'
 import { auth } from '../../../src/lib/auth'
 
@@ -27,6 +27,8 @@ interface PeerState {
   coupleId: string
   sessionId: string
   userId: string
+  partnerJid: string | null  // WhatsApp JID of the partner — used to filter messages
+  partnerName: string        // Display name of the partner
   heartbeatTimer: ReturnType<typeof setInterval> | null
   pongTimer: ReturnType<typeof setTimeout> | null
   reconnectAttempt: number
@@ -73,7 +75,7 @@ function connectUpstream(peer: WebSocketPeer, state: PeerState) {
   upstream.on('open', () => {
     console.log(`[ws/chat] upstream connected for peer ${peer.id}`)
     state.reconnectAttempt = 0
-    sendToPeer(peer, { type: 'connection-status', status: 'connected' })
+    sendToPeer(peer, { type: 'connection-status', status: 'connected', partnerName: state.partnerName })
     startHeartbeat(peer, state)
   })
 
@@ -154,23 +156,29 @@ function stopHeartbeat(state: PeerState) {
 
 // ── Message routing: bridge → browser ───────────────────────────────
 
-function routeBridgeMessage(peer: WebSocketPeer, _state: PeerState, msg: Record<string, unknown>) {
+function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<string, unknown>) {
   switch (msg.type) {
     case 'message': {
       const data = msg.data as Record<string, unknown> | undefined
       if (!data) break
       const key = data.key as Record<string, unknown> | undefined
+      // Filter: only forward messages from the bound partner JID
+      const remoteJid = key?.remoteJid as string | undefined
+      if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid) break
+      const text = data.text as string | null | undefined
+      const isMedia = data.isMedia as boolean | undefined
+      // Skip messages with no text AND no media (protocol messages)
+      if (!text && !isMedia) break
       sendToPeer(peer, {
         type: 'message',
         id: key?.id,
-        sender: data.fromMe
-          ? 'You'
-          : (data.pushName as string) ||
-            (key?.remoteJid as string)?.split('@')[0] ||
-            'unknown',
-        text: data.text,
+        sender: data.fromMe ? 'You' : state.partnerName,
+        text: text ?? null,
         timestamp: data.timestamp,
         fromMe: data.fromMe,
+        waMessageId: key?.id,
+        isMedia: isMedia ?? false,
+        mediaType: (data.mediaType as string) ?? null,
       })
       break
     }
@@ -184,11 +192,17 @@ function routeBridgeMessage(peer: WebSocketPeer, _state: PeerState, msg: Record<
       break
 
     case 'sent-echo': {
+      // Filter by JID — only forward echoes for the bound partner
+      const echoJid = msg.jid as string | undefined
+      if (state.partnerJid && echoJid && echoJid !== state.partnerJid) break
       sendToPeer(peer, msg)
       break
     }
 
     case 'message-receipt': {
+      // Filter by JID — only forward receipts for the bound partner
+      const receiptJid = msg.jid as string | undefined
+      if (state.partnerJid && receiptJid && receiptJid !== state.partnerJid) break
       sendToPeer(peer, msg)
       break
     }
@@ -232,6 +246,7 @@ async function handleLoadHistory(
         text: messages.text,
         timestamp: messages.timestamp,
         isMedia: messages.isMedia,
+        mediaType: messages.mediaType,
         waMessageId: messages.waMessageId,
       })
       .from(messages)
@@ -239,15 +254,20 @@ async function handleLoadHistory(
       .orderBy(desc(messages.timestamp))
       .limit(limit)
 
-    const mapped = rows.map((m) => ({
-      id: m.id,
-      senderId: m.senderId,
-      text: m.text,
-      timestamp: m.timestamp,
-      fromMe: m.senderId === state.userId,
-      isMedia: m.isMedia,
-      waMessageId: m.waMessageId,
-    }))
+    // Filter out empty messages (media-only / protocol messages with no text)
+    const mapped = rows
+      .filter((m) => m.text || m.isMedia)
+      .map((m) => ({
+        id: m.id,
+        sender: m.senderId === state.userId ? 'You' : state.partnerName,
+        text: m.text,
+        timestamp: m.timestamp,
+        fromMe: m.senderId === state.userId,
+        isMedia: m.isMedia,
+        mediaType: m.mediaType,
+        waMessageId: m.waMessageId,
+      }))
+
 
     sendToPeer(peer, {
       type: 'history',
@@ -268,11 +288,6 @@ export default defineWebSocketHandler({
 
     try {
       // ── Auth ────────────────────────────────────────────────────
-      const url = new URL(
-        peer.request?.url || '',
-        `http://${peer.request?.headers?.get?.('host') || 'localhost'}`,
-      )
-
       // Extract headers for Better Auth session lookup
       const reqHeaders = peer.request?.headers
       const session = await auth.api.getSession({
@@ -300,17 +315,27 @@ export default defineWebSocketHandler({
         return
       }
 
-      // Look up WA session
-      const [waSession] = await db
-        .select({ bridgeSessionId: waSessions.bridgeSessionId })
-        .from(waSessions)
-        .where(eq(waSessions.userId, userId))
+      // Look up WA session + partner name in parallel
+      const partnerId = couple.userAId === userId ? couple.userBId : couple.userAId
+      const [waSessionResult, partnerResult] = await Promise.all([
+        db
+          .select({ bridgeSessionId: waSessions.bridgeSessionId })
+          .from(waSessions)
+          .where(eq(waSessions.userId, userId)),
+        db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, partnerId)),
+      ])
 
+      const waSession = waSessionResult[0]
       if (!waSession) {
         sendToPeer(peer, { type: 'error', message: 'No WhatsApp session found' })
         peer.close(4404, 'No WhatsApp session')
         return
       }
+
+      const partnerName = partnerResult[0]?.name ?? 'Partner'
 
       // ── Store peer state ──────────────────────────────────────
       const state: PeerState = {
@@ -318,6 +343,8 @@ export default defineWebSocketHandler({
         coupleId: couple.id,
         sessionId: waSession.bridgeSessionId,
         userId,
+        partnerJid: couple.whatsappJid ?? null,
+        partnerName,
         heartbeatTimer: null,
         pongTimer: null,
         reconnectAttempt: 0,

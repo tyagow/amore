@@ -16,11 +16,27 @@ export interface NormalizedMessage {
   text: string | null
   timestamp: Date
   isMedia: boolean
+  mediaType: string | null
   source: 'baileys'
 }
 
 export function extractMessageText(msg: proto.IMessage): string | null {
-  return msg.conversation || msg.extendedTextMessage?.text || null
+  return (
+    msg.conversation ||
+    msg.extendedTextMessage?.text ||
+    msg.imageMessage?.caption ||
+    msg.videoMessage?.caption ||
+    null
+  )
+}
+
+export function getMediaType(msg: proto.IMessage): string | null {
+  if (msg.imageMessage) return 'image'
+  if (msg.videoMessage) return 'video'
+  if (msg.audioMessage) return 'audio'
+  if (msg.documentMessage) return 'document'
+  if (msg.stickerMessage) return 'sticker'
+  return null
 }
 
 /**
@@ -53,6 +69,7 @@ export function normalizeMessage(
   const senderId = key.fromMe ? connectedUserId : partnerUserId
 
   const text = extractMessageText(msg.message)
+  const mediaType = getMediaType(msg.message)
 
   const isMedia = !!(
     msg.message.imageMessage ||
@@ -75,6 +92,7 @@ export function normalizeMessage(
     text,
     timestamp: new Date(ts * 1000),
     isMedia,
+    mediaType,
     source: 'baileys',
   }
 }

@@ -95,6 +95,7 @@ export const messages = pgTable('messages', {
   timestamp: timestamp('timestamp').notNull(),
   sentiment: real('sentiment'),
   isMedia: boolean('is_media').notNull().default(false),
+  mediaType: varchar('media_type', { length: 20 }),
   source: varchar('source', { length: 20 }).notNull().default('baileys'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => [

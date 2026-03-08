@@ -50,18 +50,21 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
 
   if (confirmation) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 text-center">
-        <span className="text-3xl">
+      <div className="bg-coral-50 rounded-2xl shadow-sm p-6 text-center">
+        <span className="text-3xl animate-float-up inline-block">
           {MOODS.find((m) => m.value === selectedMood)?.emoji}
         </span>
-        <p className="text-sm text-stone-600 mt-2">Mood saved</p>
+        <p className="text-sm text-warm-600 mt-2 flex items-center justify-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Saved
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-      <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wide mb-4">
+    <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
+      <h3 className="font-display text-base text-warm-800 mb-4">
         How are you feeling?
       </h3>
 
@@ -75,14 +78,16 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
               setSelectedMood(m.value)
               setVisibility(null)
             }}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${
+            className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all ${
               selectedMood === m.value
-                ? 'bg-stone-100 ring-2 ring-stone-400'
-                : 'hover:bg-stone-50'
+                ? 'bg-coral-50 ring-2 ring-coral-400 scale-110 shadow-md animate-mood-bounce'
+                : selectedMood
+                  ? 'opacity-50 hover:opacity-75'
+                  : 'hover:bg-warm-50 hover:scale-105'
             }`}
           >
-            <span className="text-2xl">{m.emoji}</span>
-            <span className="text-xs text-stone-600">{m.label}</span>
+            <span className="text-[40px]">{m.emoji}</span>
+            <span className="text-xs text-warm-600">{m.label}</span>
           </button>
         ))}
       </div>
@@ -90,27 +95,22 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
       {/* Visibility picker — appears after mood selection */}
       {selectedMood && (
         <div className="mt-4 space-y-2">
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+          <p className="text-xs font-medium text-warm-500 tracking-wide">
             Sharing
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex gap-2">
             {VISIBILITIES.map((v) => (
               <button
                 key={v.value}
                 type="button"
                 onClick={() => setVisibility(v.value)}
-                className={`text-left px-3 py-2 rounded-lg border transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   visibility === v.value
-                    ? 'border-stone-400 bg-stone-50'
-                    : 'border-stone-200 hover:border-stone-300'
+                    ? 'bg-coral-500 text-white'
+                    : 'bg-warm-200 text-warm-600 hover:bg-warm-300'
                 }`}
               >
-                <span className="text-sm font-medium text-stone-800 block">
-                  {v.label}
-                </span>
-                <span className="text-xs text-stone-400 leading-tight block">
-                  {v.description}
-                </span>
+                {v.label}
               </button>
             ))}
           </div>
@@ -125,13 +125,13 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Add a note (optional)..."
             rows={2}
-            className="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-stone-300 placeholder:text-stone-400"
+            className="w-full text-sm border border-warm-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-coral-300 placeholder:text-warm-400"
           />
           <button
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full bg-stone-900 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-stone-800 disabled:opacity-50 transition-colors"
+            className="w-full bg-coral-500 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-coral-600 shadow-md shadow-coral-200/50 disabled:opacity-50 transition-colors"
           >
             {submitting ? 'Saving...' : 'Set Mood'}
           </button>

@@ -5,7 +5,7 @@ import { serve } from '@hono/node-server'
 import { WebSocketServer, WebSocket } from 'ws'
 import { Pool } from 'pg'
 import { SessionManager } from './sessions/manager.js'
-import { extractMessageText } from './messages/ingest.js'
+import { extractMessageText, getMediaType } from './messages/ingest.js'
 import { log } from './logger.js'
 
 // Validate required env vars
@@ -81,6 +81,8 @@ manager.on('message', ({ sessionId, messages }) => {
         key: msg.key,
         pushName: msg.pushName,
         text: msg.message ? extractMessageText(msg.message) : null,
+        isMedia: !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage || msg.message?.documentMessage || msg.message?.stickerMessage),
+        mediaType: msg.message ? getMediaType(msg.message) : null,
         timestamp: msg.messageTimestamp,
         fromMe: msg.key.fromMe,
       },

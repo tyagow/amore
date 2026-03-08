@@ -10,22 +10,22 @@ import { Nav } from './_authenticated/-components/nav'
 
 function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 bg-stone-50">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-warm-50">
       <div className="text-center max-w-md">
-        <h1 className="text-2xl font-bold text-stone-900 mb-2">Something went wrong</h1>
-        <p className="text-stone-600 mb-6">
+        <h1 className="text-2xl font-bold text-warm-900 mb-2">Something went wrong</h1>
+        <p className="text-warm-600 mb-6">
           {error instanceof Error ? error.message : 'An unexpected error occurred.'}
         </p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors"
+            className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
           >
             Try again
           </button>
           <button
             onClick={() => (window.location.href = '/login')}
-            className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 transition-colors"
+            className="px-4 py-2 border border-warm-300 text-warm-700 rounded-lg hover:bg-warm-50 transition-colors"
           >
             Sign in
           </button>
@@ -36,7 +36,7 @@ function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createFileRoute('/_authenticated')({
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async () => {
     const session = await getAuthSession()
     if (!session) {
       throw redirect({ to: '/login' })
@@ -46,11 +46,8 @@ export const Route = createFileRoute('/_authenticated')({
     const coupleData = await getMyCouple()
     const hasCouple = !!coupleData
 
-    // If no couple and not already on a public path, redirect to /connect
-    const publicPaths = ['/connect', '/setup']
-    if (!hasCouple && !publicPaths.includes(location.pathname)) {
-      throw redirect({ to: '/connect' })
-    }
+    // Allow solo access — no hard redirect to /connect
+    // Components show contextual empty states when no couple exists
 
     let pendingRequestCount = 0
     if (!hasCouple) {
@@ -69,7 +66,7 @@ function AuthenticatedLayout() {
   const { pendingRequestCount } = Route.useRouteContext()
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-warm-50">
       <Nav pendingRequestCount={pendingRequestCount} />
 
       {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
