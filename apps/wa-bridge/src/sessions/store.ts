@@ -74,11 +74,13 @@ export async function usePostgresAuthState(
           for (const id in entries) {
             const value = entries[id]
             if (value) {
-              const jsonValue = JSON.parse(JSON.stringify(value, BufferJSON.replacer))
+              // Always pass as JSON string + cast to JSONB to avoid pg driver
+              // mishandling primitives (e.g. LID session numbers like 34)
+              const jsonStr = JSON.stringify(value, BufferJSON.replacer)
               await client.query(
-                `INSERT INTO wa_auth_keys (session_id, type, id, value) VALUES ($1, $2, $3, $4)
-                 ON CONFLICT (session_id, type, id) DO UPDATE SET value = $4`,
-                [sessionId, category, id, jsonValue],
+                `INSERT INTO wa_auth_keys (session_id, type, id, value) VALUES ($1, $2, $3, $4::jsonb)
+                 ON CONFLICT (session_id, type, id) DO UPDATE SET value = $4::jsonb`,
+                [sessionId, category, id, jsonStr],
               )
             } else {
               await client.query(

@@ -344,11 +344,11 @@ export class SessionManager extends EventEmitter {
       // Cache messages for getMessage retrieval (best-effort)
       for (const msg of msgs) {
         if (msg.key.id && msg.message) {
-          const jsonValue = JSON.parse(JSON.stringify(msg.message, BufferJSON.replacer))
+          const jsonStr = JSON.stringify(msg.message, BufferJSON.replacer)
           this.pool.query(
-            `INSERT INTO wa_auth_keys (session_id, type, id, value) VALUES ($1, $2, $3, $4)
-             ON CONFLICT (session_id, type, id) DO UPDATE SET value = $4`,
-            [sessionId, 'message', msg.key.id, jsonValue],
+            `INSERT INTO wa_auth_keys (session_id, type, id, value) VALUES ($1, $2, $3, $4::jsonb)
+             ON CONFLICT (session_id, type, id) DO UPDATE SET value = $4::jsonb`,
+            [sessionId, 'message', msg.key.id, jsonStr],
           ).catch(() => { /* best-effort caching */ })
         }
       }
