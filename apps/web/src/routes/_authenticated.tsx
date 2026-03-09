@@ -3,10 +3,14 @@ import {
   Outlet,
   redirect,
   type ErrorComponentProps,
+  useLocation,
 } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { getAuthSession } from '~/server/auth'
 import { getMyCouple } from '~/server/connections'
+import { getCoachNudges } from '~/server/coach'
 import { Nav } from './_authenticated/-components/nav'
+import { CoachSidebar } from './_authenticated/-components/coach-sidebar'
 
 function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
@@ -63,16 +67,78 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const { pendingRequestCount } = Route.useRouteContext()
+  const { pendingRequestCount, hasCouple } = Route.useRouteContext()
+  const location = useLocation()
+  const [coachOpen, setCoachOpen] = useState(false)
+  const [hasNudges, setHasNudges] = useState(false)
+
+  useEffect(() => {
+    if (!hasCouple) {
+      setHasNudges(false)
+      setCoachOpen(false)
+      return
+    }
+
+    getCoachNudges()
+      .then((nudges) => {
+        setHasNudges(nudges.length > 0)
+      })
+      .catch(() => {
+        setHasNudges(false)
+      })
+  }, [hasCouple, coachOpen, location.pathname])
+
+  const currentPage =
+    location.pathname.split('/').filter(Boolean).pop() ?? 'dashboard'
 
   return (
     <div className="min-h-screen bg-warm-50">
-      <Nav pendingRequestCount={pendingRequestCount} />
+      <Nav
+        pendingRequestCount={pendingRequestCount}
+        coachOpen={coachOpen}
+        hasNudges={hasNudges}
+        onCoachToggle={
+          hasCouple ? () => setCoachOpen((open) => !open) : undefined
+        }
+      />
 
       {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
-      <div className="md:ml-64 pb-20 md:pb-0">
+      <div className={`md:ml-64 pb-20 md:pb-0 transition-[margin] duration-300 ${coachOpen ? 'lg:mr-[22rem]' : ''}`}>
         <Outlet />
       </div>
+
+      {hasCouple && coachOpen && (
+        <div className="fixed inset-y-0 right-0 z-40 hidden w-[22rem] lg:block">
+          <CoachSidebar
+            currentPage={currentPage}
+            onClose={() => setCoachOpen(false)}
+          />
+        </div>
+      )}
+
+      {hasCouple && coachOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <CoachSidebar
+            currentPage={currentPage}
+            onClose={() => setCoachOpen(false)}
+          />
+        </div>
+      )}
+
+      {hasCouple && !coachOpen && (
+        <button
+          onClick={() => setCoachOpen(true)}
+          className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-coral-500 text-white shadow-lg transition-all hover:bg-coral-600 active:scale-95 lg:hidden"
+          aria-label="Open coach"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
+          </svg>
+          {hasNudges && (
+            <span className="absolute right-1.5 top-1.5 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
+          )}
+        </button>
+      )}
     </div>
   )
 }

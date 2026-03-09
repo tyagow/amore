@@ -1,5 +1,9 @@
 import { defineEventHandler, getRequestHeader, setResponseHeader, setResponseStatus } from 'h3'
 
+function decodeBasicAuth(value: string): string {
+  return atob(value)
+}
+
 export default defineEventHandler((event) => {
   const password = process.env.SITE_PASSWORD
   if (!password) return
@@ -8,7 +12,7 @@ export default defineEventHandler((event) => {
   if (auth) {
     const [scheme, encoded] = auth.split(' ')
     if (scheme === 'Basic' && encoded) {
-      const decoded = Buffer.from(encoded, 'base64').toString()
+      const decoded = decodeBasicAuth(encoded)
       const [, pwd] = decoded.split(':')
       if (pwd === password) return
     }

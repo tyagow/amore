@@ -7,8 +7,6 @@ import { ChatHeader } from './-components/chat/chat-header'
 import { MessageList } from './-components/chat/message-list'
 import { ChatInput } from './-components/chat/chat-input'
 import { ReviewPanel } from './-components/chat/review-panel'
-import { AISidebar } from './-components/chat/ai-sidebar'
-import { MobileSidebarSheet } from './-components/chat/mobile-sidebar-sheet'
 import { LoggedOutOverlay } from './-components/chat/logged-out-overlay'
 
 export const Route = createFileRoute('/_authenticated/chat')({
@@ -55,7 +53,6 @@ function ChatPage() {
 function ChatPageConnected() {
   const navigate = useNavigate()
   const [inputText, setInputText] = useState('')
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const {
     messages,
@@ -70,23 +67,12 @@ function ChatPageConnected() {
   } = useChatWebSocket()
 
   const {
-    suggestions,
-    mood,
-    coaching,
-    tensionFlag,
     review,
-    suggestionsLoading,
-    moodLoading,
     reviewLoading,
-    aiError,
     reviewDraft,
     clearReview,
-    healthScore,
-    partnerProfile,
-    recentInsights,
     partnerName,
     contactJid,
-    totalMessages,
   } = useChatAI(messages)
 
   // Redirect on session-expired
@@ -120,14 +106,6 @@ function ChatPageConnected() {
     [reviewDraft],
   )
 
-  const handleUseSuggestion = useCallback(
-    (text: string) => {
-      setInputText(text)
-      setMobileSidebarOpen(false)
-    },
-    [],
-  )
-
   const handleUseRevised = useCallback(() => {
     if (review?.revised) {
       setInputText(review.revised)
@@ -141,7 +119,7 @@ function ChatPageConnected() {
       {isLoggedOut && <LoggedOutOverlay />}
 
       {/* Chat column */}
-      <div className="flex-1 flex flex-col min-w-0 lg:max-w-[65%]">
+      <div className="flex-1 flex flex-col min-w-0">
         <ChatHeader
           partnerName={wsPartnerName !== 'Partner' ? wsPartnerName : partnerName}
           connectionStatus={connectionStatus}
@@ -170,56 +148,6 @@ function ChatPageConnected() {
           setInputText={setInputText}
         />
       </div>
-
-      {/* Desktop AI sidebar */}
-      <div className="hidden lg:flex lg:w-[35%] lg:flex-col">
-        <AISidebar
-          healthScore={healthScore}
-          mood={mood}
-          moodLoading={moodLoading}
-          coaching={coaching}
-          suggestions={suggestions}
-          suggestionsLoading={suggestionsLoading}
-          tensionFlag={tensionFlag}
-          aiError={aiError}
-          totalMessages={totalMessages}
-          onUseSuggestion={handleUseSuggestion}
-          partnerProfile={partnerProfile}
-          recentInsights={recentInsights}
-        />
-      </div>
-
-      {/* Mobile sidebar sheet */}
-      <MobileSidebarSheet
-        open={mobileSidebarOpen}
-        onClose={() => setMobileSidebarOpen(false)}
-      >
-        <AISidebar
-          healthScore={healthScore}
-          mood={mood}
-          moodLoading={moodLoading}
-          coaching={coaching}
-          suggestions={suggestions}
-          suggestionsLoading={suggestionsLoading}
-          tensionFlag={tensionFlag}
-          aiError={aiError}
-          totalMessages={totalMessages}
-          onUseSuggestion={handleUseSuggestion}
-          partnerProfile={partnerProfile}
-          recentInsights={recentInsights}
-        />
-      </MobileSidebarSheet>
-
-      {/* Mobile FAB to open sidebar */}
-      <button
-        onClick={() => setMobileSidebarOpen(true)}
-        className="lg:hidden fixed bottom-24 right-4 z-40 w-12 h-12 bg-coral-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-coral-600 transition-colors"
-        aria-label="Open AI sidebar"
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-        </svg>
-      </button>
     </div>
   )
 }
