@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+// The AI sometimes returns a plain number instead of a record — coerce to record
+const flexibleRecord = z.union([
+  z.record(z.string(), z.number()),
+  z.number().transform((n) => ({ _overall: n })),
+])
+
 export const analysisResultSchema = z.object({
   healthScore: z.number().min(1).max(100),
   sentiments: z.array(z.object({
@@ -7,10 +13,10 @@ export const analysisResultSchema = z.object({
     score: z.number().min(-1).max(1),
   })),
   patterns: z.object({
-    initiationBalance: z.record(z.string(), z.number()),
-    avgResponseMinutes: z.record(z.string(), z.number()),
-    messageCountBySender: z.record(z.string(), z.number()),
-    avgLengthBySender: z.record(z.string(), z.number()),
+    initiationBalance: flexibleRecord,
+    avgResponseMinutes: flexibleRecord,
+    messageCountBySender: flexibleRecord,
+    avgLengthBySender: flexibleRecord,
   }),
   summary: z.string().min(1),
 })
