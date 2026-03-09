@@ -11,54 +11,42 @@ interface InsightsCardProps {
 }
 
 const TYPE_STYLES: Record<string, { label: string; bg: string; text: string }> = {
-  'communication pattern': {
-    label: 'Communication',
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-  },
-  'love language': {
-    label: 'Love Language',
-    bg: 'bg-pink-50',
-    text: 'text-pink-700',
-  },
-  'coaching tip': {
-    label: 'Coaching Tip',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-  },
-  conflict: {
-    label: 'Conflict',
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-  },
-  pattern: {
-    label: 'Pattern',
-    bg: 'bg-violet-50',
-    text: 'text-violet-700',
-  },
+  health_score: { label: 'Health Score', bg: 'bg-coral-50', text: 'text-coral-700' },
+  communication_pattern: { label: 'Communication', bg: 'bg-blue-50', text: 'text-blue-700' },
+  love_language: { label: 'Love Language', bg: 'bg-pink-50', text: 'text-pink-700' },
+  coaching_tip: { label: 'Coaching', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  conflict_alert: { label: 'Conflict', bg: 'bg-red-50', text: 'text-red-700' },
+  goal_suggestion: { label: 'Goal', bg: 'bg-violet-50', text: 'text-violet-700' },
+  sentiment_trend: { label: 'Sentiment', bg: 'bg-amber-50', text: 'text-amber-700' },
+  wish: { label: 'Wish', bg: 'bg-rose-50', text: 'text-rose-700' },
+  important_date: { label: 'Date', bg: 'bg-indigo-50', text: 'text-indigo-700' },
 }
 
-function getInsightText(content: unknown): string {
+export function getInsightText(content: unknown): string {
   if (typeof content === 'string') return content
-  if (content && typeof content === 'object' && 'text' in content) {
-    return String((content as { text: string }).text)
-  }
-  if (content && typeof content === 'object' && 'summary' in content) {
-    return String((content as { summary: string }).summary)
-  }
+  if (!content || typeof content !== 'object') return 'New insight available'
+  const c = content as Record<string, unknown>
+  if (c.tip) return String(c.tip)
+  if (c.text) return String(c.text)
+  if (c.summary) return String(c.summary)
+  if (c.title) return String(c.title)
+  if (c.message) return String(c.message)
+  if (c.language) return `${c.language} (${Math.round(Number(c.confidence || 0) * 100)}%)`
+  if (c.pattern) return `${String(c.pattern).replace(/_/g, ' ')}`
+  if (c.description) return String(c.description)
   return 'New insight available'
 }
 
-function TypeBadge({ type }: { type: string }) {
+export function TypeBadge({ type }: { type: string }) {
   const style = TYPE_STYLES[type] ?? {
-    label: type,
+    label: type.replace(/_/g, ' '),
     bg: 'bg-warm-100',
     text: 'text-warm-600',
   }
 
   return (
     <span
-      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${style.bg} ${style.text}`}
+      className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${style.bg} ${style.text}`}
     >
       {style.label}
     </span>
