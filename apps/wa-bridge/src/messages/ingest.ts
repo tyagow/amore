@@ -21,23 +21,88 @@ export interface NormalizedMessage {
   source: 'baileys'
 }
 
+function getNestedMessageValue(
+  value: Record<string, unknown>,
+  path: string[],
+): proto.IMessage | null {
+  let current: unknown = value
+  for (const key of path) {
+    if (!current || typeof current !== 'object') return null
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current && typeof current === 'object'
+    ? (current as proto.IMessage)
+    : null
+}
+
+export function unwrapMessageContent(
+  msg: proto.IMessage | null | undefined,
+): proto.IMessage | null {
+  let current = msg ?? null
+
+  for (let depth = 0; current && depth < 8; depth++) {
+    const record = current as Record<string, unknown>
+    const next =
+      getNestedMessageValue(record, ['ephemeralMessage', 'message']) ||
+      getNestedMessageValue(record, ['viewOnceMessage', 'message']) ||
+      getNestedMessageValue(record, ['viewOnceMessageV2', 'message']) ||
+      getNestedMessageValue(record, ['viewOnceMessageV2Extension', 'message']) ||
+      getNestedMessageValue(record, ['documentWithCaptionMessage', 'message']) ||
+      getNestedMessageValue(record, ['editedMessage', 'message']) ||
+      getNestedMessageValue(record, [
+        'editedMessage',
+        'message',
+        'protocolMessage',
+        'editedMessage',
+      ])
+
+    if (!next || next === current) {
+      return current
+    }
+
+    current = next
+  }
+
+  return current
+}
+
 export function extractMessageText(msg: proto.IMessage): string | null {
+  const content = unwrapMessageContent(msg)
+  if (!content) return null
+
   return (
-    msg.conversation ||
-    msg.extendedTextMessage?.text ||
-    msg.imageMessage?.caption ||
-    msg.videoMessage?.caption ||
+    content.conversation ||
+    content.extendedTextMessage?.text ||
+    content.imageMessage?.caption ||
+    content.videoMessage?.caption ||
+    content.documentMessage?.caption ||
     null
   )
 }
 
 export function getMediaType(msg: proto.IMessage): string | null {
-  if (msg.imageMessage) return 'image'
-  if (msg.videoMessage) return 'video'
-  if (msg.audioMessage) return 'audio'
-  if (msg.documentMessage) return 'document'
-  if (msg.stickerMessage) return 'sticker'
+  const content = unwrapMessageContent(msg)
+  if (!content) return null
+
+  if (content.imageMessage) return 'image'
+  if (content.videoMessage) return 'video'
+  if (content.audioMessage) return 'audio'
+  if (content.documentMessage) return 'document'
+  if (content.stickerMessage) return 'sticker'
   return null
+}
+
+export function extractMessageThumbnail(msg: proto.IMessage): string | null {
+  const content = unwrapMessageContent(msg)
+  if (!content) return null
+
+  const jpegThumbnail =
+    content.imageMessage?.jpegThumbnail ||
+    content.videoMessage?.jpegThumbnail ||
+    content.stickerMessage?.pngThumbnail ||
+    null
+
+  return jpegThumbnail ? Buffer.from(jpegThumbnail).toString('base64') : null
 }
 
 /**
@@ -65,30 +130,16 @@ export function normalizeMessage(
   if (key.remoteJid === 'status@broadcast') return null
   // Skip if no message content or no message ID
   if (!msg.message || !key.id) return null
+  const content = unwrapMessageContent(msg.message)
+  if (!content) return null
 
   // fromMe = sent by the connected phone owner = connectedUserId
   const senderId = key.fromMe ? connectedUserId : partnerUserId
 
-  const text = extractMessageText(msg.message)
-  const mediaType = getMediaType(msg.message)
-
-  const isMedia = !!(
-    msg.message.imageMessage ||
-    msg.message.videoMessage ||
-    msg.message.audioMessage ||
-    msg.message.documentMessage ||
-    msg.message.stickerMessage
-  )
-
-  // Extract JPEG thumbnail for image/video/sticker
-  const jpegThumbnail =
-    msg.message.imageMessage?.jpegThumbnail ||
-    msg.message.videoMessage?.jpegThumbnail ||
-    msg.message.stickerMessage?.pngThumbnail ||
-    null
-  const thumbnail = jpegThumbnail
-    ? Buffer.from(jpegThumbnail).toString('base64')
-    : null
+  const text = extractMessageText(content)
+  const mediaType = getMediaType(content)
+  const isMedia = mediaType !== null
+  const thumbnail = extractMessageThumbnail(content)
 
   const ts =
     typeof msg.messageTimestamp === 'number'

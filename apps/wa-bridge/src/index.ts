@@ -8,7 +8,11 @@ import { eq, and } from 'drizzle-orm'
 import { db } from '@amore-couples/db/client'
 import { messageMedia } from '@amore-couples/db/schema'
 import { SessionManager } from './sessions/manager.js'
-import { extractMessageText, getMediaType } from './messages/ingest.js'
+import {
+  extractMessageText,
+  getMediaType,
+  extractMessageThumbnail,
+} from './messages/ingest.js'
 import { log } from './logger.js'
 
 // Validate required env vars
@@ -92,15 +96,16 @@ manager.on('connected', ({ sessionId, user }) => {
 
 manager.on('message', ({ sessionId, messages }) => {
   for (const msg of messages) {
+    const content = msg.message ?? null
     broadcast(sessionId, {
       type: 'message',
       data: {
         key: msg.key,
         pushName: msg.pushName,
-        text: msg.message ? extractMessageText(msg.message) : null,
-        isMedia: !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage || msg.message?.documentMessage || msg.message?.stickerMessage),
-        mediaType: msg.message ? getMediaType(msg.message) : null,
-        thumbnail: msg.message?.imageMessage?.jpegThumbnail?.toString('base64') || msg.message?.videoMessage?.jpegThumbnail?.toString('base64') || null,
+        text: content ? extractMessageText(content) : null,
+        isMedia: content ? getMediaType(content) !== null : false,
+        mediaType: content ? getMediaType(content) : null,
+        thumbnail: content ? extractMessageThumbnail(content) : null,
         timestamp: msg.messageTimestamp,
         fromMe: msg.key.fromMe,
       },
