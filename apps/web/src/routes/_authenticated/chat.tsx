@@ -95,9 +95,8 @@ function ChatPageConnected() {
   )
 
   const handleResync = useCallback(() => {
-    if (!contactJid) return
-    requestResync(contactJid)
-  }, [requestResync, contactJid])
+    requestResync()
+  }, [requestResync])
 
   const handleReview = useCallback(
     (text: string) => {

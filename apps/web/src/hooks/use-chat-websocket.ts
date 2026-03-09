@@ -8,7 +8,7 @@ interface UseChatWebSocketReturn {
   connectionStatus: ConnectionStatus
   isLoading: boolean
   hasMore: boolean
-  requestResync: (jid: string) => void
+  requestResync: () => void
   isResyncing: boolean
   partnerName: string
 }
@@ -122,6 +122,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
             isMedia: m.isMedia as boolean | undefined,
             mediaType: m.mediaType as ChatMessage['mediaType'],
             waMessageId: m.waMessageId as string | undefined,
+            thumbnail: (m.thumbnail as string | null) ?? null,
             // Messages from DB are confirmed sent
             status: (m.fromMe ? 'sent' : undefined) as 'sent' | undefined,
           }))
@@ -463,12 +464,12 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
     ws.send(JSON.stringify({ type: 'load-history', before: ts, limit: 50 }))
   }, [])
 
-  // Request resync from wa-bridge
-  const requestResync = useCallback((jid: string) => {
+  // Request resync from wa-bridge (server injects JID from session state)
+  const requestResync = useCallback(() => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return
     setIsResyncing(true)
-    ws.send(JSON.stringify({ type: 'resync', jid }))
+    ws.send(JSON.stringify({ type: 'resync' }))
   }, [])
 
   // Connect on mount

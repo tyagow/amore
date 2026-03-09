@@ -253,13 +253,13 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
     case 'messages-persisted':
       sendToPeer(peer, msg)
       // Bridge just persisted messages to prod DB — pull them into local DB
-      syncMessagesFromProd(peer, state)
+      syncMessagesFromProd(peer, state, 'incremental')
       break
 
     case 'resync-complete':
       sendToPeer(peer, msg)
-      // Resync finished on prod — pull messages into local DB
-      syncMessagesFromProd(peer, state)
+      // Resync can backfill older gaps, so run a full pull before reloading history.
+      syncMessagesFromProd(peer, state, 'full')
       break
 
     case 'analysis-complete':
@@ -279,57 +279,77 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
 
 // ── Sync messages from prod DB into local DB ───────────────────────
 
-async function syncMessagesFromProd(peer: WebSocketPeer, state: PeerState) {
+async function syncMessagesFromProd(
+  peer: WebSocketPeer,
+  state: PeerState,
+  mode: 'incremental' | 'full' = 'incremental',
+) {
   const PROD_DB_URL = process.env.PROD_DATABASE_URL
   if (!PROD_DB_URL) return
 
-  try {
-    const pg = await import('pg')
-    const pool = new pg.default.Pool({ connectionString: PROD_DB_URL, max: 2 })
+  type ProdPool = {
+    query: (text: string, values?: unknown[]) => Promise<{ rows: any[] }>
+    end: () => Promise<void>
+  }
 
-    // Check if local DB already has messages for this couple
-    const localCount = await db
+  let pool: ProdPool | null = null
+  try {
+    // @ts-expect-error `pg` does not expose usable ESM typings in this package.
+    const pg = await import('pg')
+    const prodPool = new (pg.default as any).Pool({
+      connectionString: PROD_DB_URL,
+      max: 2,
+    }) as ProdPool
+    pool = prodPool
+
+    const [localLatestMessage] = await db
       .select({ timestamp: messages.timestamp })
       .from(messages)
       .where(eq(messages.coupleId, state.coupleId))
+      .orderBy(desc(messages.timestamp))
       .limit(1)
-
-    if (localCount.length > 0) {
-      await pool.end()
-      return // Already have messages, skip full sync
-    }
 
     // Find the prod couple that contains the same user (by matching session user's email)
     const localUser = await db.query.users.findFirst({
       where: eq(users.id, state.userId),
       columns: { email: true },
     })
-    if (!localUser) { await pool.end(); return }
+    if (!localUser) return
 
     // Look up the user in prod by email, then find their couple
-    const { rows: prodUsers } = await pool.query(
+    const { rows: prodUsers } = await prodPool.query(
       'SELECT id FROM users WHERE email = $1 LIMIT 1',
       [localUser.email],
     )
-    if (prodUsers.length === 0) { await pool.end(); return }
+    if (prodUsers.length === 0) return
 
     const prodUserId = prodUsers[0].id
-    const { rows: prodCouples } = await pool.query(
+    const { rows: prodCouples } = await prodPool.query(
       'SELECT id FROM couples WHERE (user_a_id = $1 OR user_b_id = $1) AND status = $2 LIMIT 1',
       [prodUserId, 'active'],
     )
-    if (prodCouples.length === 0) { await pool.end(); return }
+    if (prodCouples.length === 0) return
 
     const prodCoupleId = prodCouples[0].id
 
-    // Pull all messages from prod couple
-    const { rows } = await pool.query(
-      'SELECT * FROM messages WHERE couple_id = $1 ORDER BY timestamp ASC',
-      [prodCoupleId],
+    const prodMessagesQuery =
+      mode === 'full' || !localLatestMessage
+        ? {
+            text: 'SELECT * FROM messages WHERE couple_id = $1 ORDER BY timestamp ASC',
+            values: [prodCoupleId],
+          }
+        : {
+            // Re-fetch the last known second so same-timestamp messages are not missed.
+            text: 'SELECT * FROM messages WHERE couple_id = $1 AND timestamp >= $2 ORDER BY timestamp ASC',
+            values: [prodCoupleId, localLatestMessage.timestamp],
+          }
+    const { rows } = await prodPool.query(
+      prodMessagesQuery.text,
+      prodMessagesQuery.values,
     )
 
     // Build a sender mapping: prod user IDs → local user IDs
-    const { rows: prodCoupleUsers } = await pool.query(
+    const { rows: prodCoupleUsers } = await prodPool.query(
       'SELECT id, email FROM users WHERE id IN (SELECT user_a_id FROM couples WHERE id = $1 UNION SELECT user_b_id FROM couples WHERE id = $1)',
       [prodCoupleId],
     )
@@ -352,7 +372,7 @@ async function syncMessagesFromProd(peer: WebSocketPeer, state: PeerState) {
       const localSenderId = senderMap.get(m.sender_id)
       if (!localSenderId) continue
       try {
-        await db.insert(messages)
+        const result = await db.insert(messages)
           .values({
             coupleId: state.coupleId,
             waMessageId: m.wa_message_id,
@@ -366,18 +386,22 @@ async function syncMessagesFromProd(peer: WebSocketPeer, state: PeerState) {
             source: m.source,
           })
           .onConflictDoNothing()
-        inserted++
+        inserted += result.rowCount ?? 0
       } catch { /* skip */ }
     }
 
-    await pool.end()
-
     if (inserted > 0) {
-      console.log(`[ws/chat] synced ${inserted} messages from prod for couple ${state.coupleId.slice(0, 8)}`)
+      console.log(
+        `[ws/chat] synced ${inserted} ${mode} messages from prod for couple ${state.coupleId.slice(0, 8)}`,
+      )
       handleLoadHistory(peer, state, { limit: 50 })
     }
   } catch (err) {
     console.error('[ws/chat] prod sync failed:', err)
+  } finally {
+    if (pool) {
+      await pool.end().catch(() => {})
+    }
   }
 }
 
@@ -520,7 +544,7 @@ export default defineWebSocketHandler({
       handleLoadHistory(peer, state, { limit: 50 })
 
       // ── Sync from prod DB if local is empty ──
-      syncMessagesFromProd(peer, state)
+      syncMessagesFromProd(peer, state, 'incremental')
     } catch (err) {
       console.error('[ws/chat] open error:', err)
       sendToPeer(peer, { type: 'error', message: 'Internal server error' })
@@ -556,6 +580,22 @@ export default defineWebSocketHandler({
 
         case 'load-history':
           handleLoadHistory(peer, state, parsed)
+          break
+
+        case 'resync':
+          // Inject partnerJid from server state if client didn't provide one
+          if (!parsed.jid && state.partnerJid) {
+            parsed.jid = state.partnerJid
+          }
+          if (
+            state.upstream &&
+            state.upstream.readyState === WebSocket.OPEN &&
+            parsed.jid
+          ) {
+            state.upstream.send(JSON.stringify(parsed))
+          } else {
+            sendToPeer(peer, { type: 'resync-error', error: 'No partner JID or bridge not connected' })
+          }
           break
 
         default:
