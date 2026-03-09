@@ -1,8 +1,15 @@
 export { analyzeConversation, type AnalysisResult } from './analyze'
 export { generateCoachingTips, generateMoodCoaching, type CoachingTip, type MoodCoachingInput } from './coach'
+export * from './coach-conversation'
 export { extractEntities, type ExtractedEntities } from './extract'
 export { AIParseError } from './config'
 export { analysisResultSchema, extractedEntitiesSchema, coachingTipsSchema } from './schemas'
-export { runAnalysisPipeline, type AnalysisOutput, type InsightRow } from './orchestrate'
+export {
+  detectNudgeTriggers,
+  runAnalysisPipeline,
+  type AnalysisOutput,
+  type InsightRow,
+  type NudgeTrigger,
+} from './orchestrate'
 export { generateReplySuggestions, analyzeLiveMood, reviewMessageTone, type ChatMessage } from './chat'
 export { detectMoodShift, type MoodDetectionResult } from './mood-detect'
