@@ -1,7 +1,7 @@
 import { db } from '@amore-couples/db/client'
-import { messages, insights, couples, userRelationshipProfiles, users } from '@amore-couples/db/schema'
+import { messages, insights, couples, userRelationshipProfiles, users, healthScoreHistory, coupleEntities, coachNudges } from '@amore-couples/db/schema'
 import { eq, asc } from 'drizzle-orm'
-import { runAnalysisPipeline } from '@amore-couples/ai'
+import { detectNudgeTriggers, runAnalysisPipeline } from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
 import { log } from '../logger.js'
 
@@ -14,6 +14,7 @@ export async function runAnalysis(coupleId: string): Promise<void> {
     .select({
       userAId: couples.userAId,
       userBId: couples.userBId,
+      healthScore: couples.healthScore,
     })
     .from(couples)
     .where(eq(couples.id, coupleId))
@@ -76,10 +77,13 @@ export async function runAnalysis(coupleId: string): Promise<void> {
     }))
 
   const output = await runAnalysisPipeline(parsed, coupleId, undefined, userA, userB)
+  const nudgeTriggers = detectNudgeTriggers(
+    output.healthScore,
+    couple.healthScore,
+    output.insightRows,
+  )
 
   await db.transaction(async (tx) => {
-    await tx.delete(insights).where(eq(insights.coupleId, coupleId))
-
     if (output.insightRows.length > 0) {
       await tx.insert(insights).values(output.insightRows)
     }
@@ -93,7 +97,42 @@ export async function runAnalysis(coupleId: string): Promise<void> {
       })
       .where(eq(couples.id, coupleId))
 
-    // Store profiles for both users in the couple
+    await tx.insert(healthScoreHistory).values({
+      coupleId,
+      score: output.healthScore,
+      summary: output.summary,
+    })
+
+    if (output.profileData.wishlist?.length) {
+      await tx.insert(coupleEntities).values(
+        output.profileData.wishlist.map(w => ({
+          coupleId,
+          type: 'wish' as const,
+          content: w,
+        }))
+      )
+    }
+
+    if (output.profileData.importantDates?.length) {
+      await tx.insert(coupleEntities).values(
+        output.profileData.importantDates.map(d => ({
+          coupleId,
+          type: 'important_date' as const,
+          content: d,
+        }))
+      )
+    }
+
+    if (nudgeTriggers.length > 0) {
+      await tx.insert(coachNudges).values(
+        nudgeTriggers.map((nudge) => ({
+          coupleId,
+          trigger: nudge.trigger,
+          message: nudge.message,
+        })),
+      )
+    }
+
     for (const userId of [couple.userAId, couple.userBId]) {
       await tx.insert(userRelationshipProfiles)
         .values({
@@ -115,6 +154,17 @@ export async function runAnalysis(coupleId: string): Promise<void> {
         })
     }
   })
+
+  if (output.sentiments?.length) {
+    for (const s of output.sentiments) {
+      const msg = parsed[s.index]
+      if (msg) {
+        await db.update(messages)
+          .set({ sentiment: s.score })
+          .where(eq(messages.id, msg.id))
+      }
+    }
+  }
 
   log.info({ coupleId, insightCount: output.insightRows.length, healthScore: output.healthScore }, 'Analysis completed')
 }

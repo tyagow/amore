@@ -2,7 +2,7 @@ import {
   pgTable, uuid, varchar, text, timestamp, integer,
   real, boolean, jsonb, index, uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 
 // ── Better Auth tables ──────────────────────────────────
 
@@ -193,3 +193,126 @@ export const waAuthKeys = pgTable('wa_auth_keys', {
 }, (table) => [
   primaryKey({ columns: [table.sessionId, table.type, table.id] }),
 ])
+
+// ── Health Score History ──────────────────────────────
+
+export const healthScoreHistory = pgTable('health_score_history', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id),
+  score: integer('score').notNull(),
+  summary: text('summary'),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+})
+
+// ── Couple Entities ───────────────────────────────────
+
+export const coupleEntities = pgTable('couple_entities', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id),
+  type: varchar('type', { length: 30 }).notNull(),
+  content: jsonb('content').notNull(),
+  extractedAt: timestamp('extracted_at').defaultNow().notNull(),
+  status: varchar('status', { length: 20 }).default('active').notNull(),
+})
+
+// ── Coach ──────────────────────────────────────────────
+
+export const coachThreads = pgTable('coach_threads', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('coach_threads_couple_idx').on(table.coupleId),
+])
+
+export const coachMessages = pgTable('coach_messages', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  threadId: text('thread_id').notNull().references(() => coachThreads.id, { onDelete: 'cascade' }),
+  role: varchar('role', { length: 20 }).notNull(),
+  content: text('content').notNull(),
+  contextSnapshot: jsonb('context_snapshot'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('coach_messages_thread_idx').on(table.threadId),
+])
+
+export const coachMemory = pgTable('coach_memory', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  category: varchar('category', { length: 50 }).notNull(),
+  content: text('content').notNull(),
+  sourceThreadId: text('source_thread_id').references(() => coachThreads.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('coach_memory_couple_idx').on(table.coupleId),
+])
+
+export const coachNudges = pgTable('coach_nudges', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  trigger: varchar('trigger', { length: 50 }).notNull(),
+  message: text('message').notNull(),
+  dismissed: boolean('dismissed').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('coach_nudges_couple_idx').on(table.coupleId),
+])
+
+// ── Relations ─────────────────────────────────────────
+
+export const couplesRelations = relations(couples, ({ many }) => ({
+  healthScoreHistory: many(healthScoreHistory),
+  coupleEntities: many(coupleEntities),
+  coachThreads: many(coachThreads),
+  coachMemory: many(coachMemory),
+  coachNudges: many(coachNudges),
+}))
+
+export const healthScoreHistoryRelations = relations(healthScoreHistory, ({ one }) => ({
+  couple: one(couples, {
+    fields: [healthScoreHistory.coupleId],
+    references: [couples.id],
+  }),
+}))
+
+export const coupleEntitiesRelations = relations(coupleEntities, ({ one }) => ({
+  couple: one(couples, {
+    fields: [coupleEntities.coupleId],
+    references: [couples.id],
+  }),
+}))
+
+export const coachThreadsRelations = relations(coachThreads, ({ one, many }) => ({
+  couple: one(couples, {
+    fields: [coachThreads.coupleId],
+    references: [couples.id],
+  }),
+  messages: many(coachMessages),
+}))
+
+export const coachMessagesRelations = relations(coachMessages, ({ one }) => ({
+  thread: one(coachThreads, {
+    fields: [coachMessages.threadId],
+    references: [coachThreads.id],
+  }),
+}))
+
+export const coachMemoryRelations = relations(coachMemory, ({ one }) => ({
+  couple: one(couples, {
+    fields: [coachMemory.coupleId],
+    references: [couples.id],
+  }),
+  sourceThread: one(coachThreads, {
+    fields: [coachMemory.sourceThreadId],
+    references: [coachThreads.id],
+  }),
+}))
+
+export const coachNudgesRelations = relations(coachNudges, ({ one }) => ({
+  couple: one(couples, {
+    fields: [coachNudges.coupleId],
+    references: [couples.id],
+  }),
+}))

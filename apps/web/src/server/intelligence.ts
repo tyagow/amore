@@ -7,10 +7,13 @@ import {
   insights,
   moodStates,
   coupleGoals,
+  healthScoreHistory,
+  coupleEntities,
+  coachNudges,
 } from '@amore-couples/db/schema'
 import { eq, and, desc, asc, inArray, sql } from 'drizzle-orm'
 import { messages, couples as couplesTable } from '@amore-couples/db/schema'
-import { runAnalysisPipeline } from '@amore-couples/ai'
+import { detectNudgeTriggers, runAnalysisPipeline } from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
 
 /**
@@ -189,6 +192,7 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
 export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
   async () => {
     const { couple } = await requireCouple()
+    const previousHealthScore = couple.healthScore
 
     try {
       // Fetch user names for AI context
@@ -242,11 +246,14 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
         }))
 
       const output = await runAnalysisPipeline(parsed, couple.id, undefined, userA, userB)
+      const nudgeTriggers = detectNudgeTriggers(
+        output.healthScore,
+        previousHealthScore,
+        output.insightRows,
+      )
 
       // Persist results
       await db.transaction(async (tx) => {
-        await tx.delete(insights).where(eq(insights.coupleId, couple.id))
-
         if (output.insightRows.length > 0) {
           await tx.insert(insights).values(output.insightRows)
         }
@@ -259,6 +266,42 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
             messagesSinceAnalysis: 0,
           })
           .where(eq(couplesTable.id, couple.id))
+
+        await tx.insert(healthScoreHistory).values({
+          coupleId: couple.id,
+          score: output.healthScore,
+          summary: output.summary,
+        })
+
+        if (output.profileData.wishlist?.length) {
+          await tx.insert(coupleEntities).values(
+            output.profileData.wishlist.map(w => ({
+              coupleId: couple.id,
+              type: 'wish' as const,
+              content: w,
+            }))
+          )
+        }
+
+        if (output.profileData.importantDates?.length) {
+          await tx.insert(coupleEntities).values(
+            output.profileData.importantDates.map(d => ({
+              coupleId: couple.id,
+              type: 'important_date' as const,
+              content: d,
+            }))
+          )
+        }
+
+        if (nudgeTriggers.length > 0) {
+          await tx.insert(coachNudges).values(
+            nudgeTriggers.map((nudge) => ({
+              coupleId: couple.id,
+              trigger: nudge.trigger,
+              message: nudge.message,
+            })),
+          )
+        }
 
         for (const userId of [couple.userAId, couple.userBId]) {
           await tx.insert(userRelationshipProfiles)
@@ -281,6 +324,17 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
             })
         }
       })
+
+      if (output.sentiments?.length) {
+        for (const s of output.sentiments) {
+          const msg = parsed[s.index]
+          if (msg) {
+            await db.update(messages)
+              .set({ sentiment: s.score })
+              .where(eq(messages.id, msg.id))
+          }
+        }
+      }
 
       return { status: 'analysis_complete', coupleId: couple.id, healthScore: output.healthScore }
     } catch (err) {

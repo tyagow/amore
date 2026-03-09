@@ -5,6 +5,12 @@ export type InsightType =
   | 'coaching_tip'
   | 'conflict_alert'
   | 'goal_suggestion'
+  | 'sentiment_trend'
+  | 'conversation_highlight'
+  | 'conflict_pattern'
+  | 'shared_interest'
+  | 'wish'
+  | 'important_date'
 
 export interface Insight {
   id: string
