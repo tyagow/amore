@@ -8,12 +8,15 @@ import {
 } from '~/server/profile'
 
 export const Route = createFileRoute('/_authenticated/profile')({
-  loader: async () => {
+  loader: async ({ context }) => {
+    if (!context.hasCouple) {
+      return { hasCouple: false as const, profile: null, partnerData: null }
+    }
     const [profile, partnerData] = await Promise.all([
       getProfile(),
       getPartnerProfile(),
     ])
-    return { profile, partnerData }
+    return { hasCouple: true as const, profile, partnerData }
   },
   component: ProfilePage,
 })
@@ -64,8 +67,24 @@ function EmptyField({ label }: { label: string }) {
 
 function ProfilePage() {
   const data = Route.useLoaderData()
+
+  if (!data.hasCouple) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="font-display text-3xl text-warm-900">Relationship Profile</h1>
+          <p className="text-warm-500 mt-1">How you show up in your relationship</p>
+        </div>
+        <div className="bg-warm-100 rounded-2xl p-8 text-center">
+          <p className="text-warm-500 mb-4">Connect with your partner to build your relationship profile.</p>
+          <Link to="/connect" className="text-coral-500 font-medium hover:underline">Connect now</Link>
+        </div>
+      </div>
+    )
+  }
+
   const [profile, setProfile] = useState(data.profile)
-  const { partnerData } = data
+  const partnerData = data.partnerData!
 
   const [editing, setEditing] = useState<
     'love-languages' | 'communication' | 'interests' | null

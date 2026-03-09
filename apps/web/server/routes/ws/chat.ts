@@ -4,7 +4,7 @@
  * Nitro server route: ws://host/ws/chat?coupleId=...
  * Uses crossws (via h3's defineWebSocketHandler) for protocol-agnostic WS.
  *
- * Authenticates via session, resolves coupleId, proxies to wa-bridge on port 9942.
+ * Authenticates via session, resolves coupleId, proxies to wa-bridge on port 9945.
  */
 
 import {
@@ -13,13 +13,15 @@ import {
   type WebSocketMessage,
 } from 'h3'
 import WebSocket from 'ws'
+import { SignJWT } from 'jose'
 import { db } from '@amore-couples/db'
 import { waSessions, couples, messages, users } from '@amore-couples/db/schema'
 import { eq, or, and, lt, desc } from 'drizzle-orm'
 import { auth } from '../../../src/lib/auth'
 
-const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9942'
-const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || ''
+const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9945'
+const WA_BRIDGE_JWT_SECRET = process.env.WA_BRIDGE_JWT_SECRET || ''
+const jwtSecretKey = new TextEncoder().encode(WA_BRIDGE_JWT_SECRET)
 
 // ── Per-peer state ──────────────────────────────────────────────────
 interface PeerState {
@@ -27,6 +29,7 @@ interface PeerState {
   coupleId: string
   sessionId: string
   userId: string
+  partnerId: string          // User ID of the partner — for message persistence
   partnerJid: string | null  // WhatsApp JID of the partner — used to filter messages
   partnerName: string        // Display name of the partner
   heartbeatTimer: ReturnType<typeof setInterval> | null
@@ -59,17 +62,30 @@ function cleanupPeer(peerId: string) {
   peers.delete(peerId)
 }
 
+// ── JWT signing for wa-bridge auth ──────────────────────────────────
+
+async function signBridgeToken(state: PeerState): Promise<string> {
+  return new SignJWT({
+    coupleId: state.coupleId,
+    sessionId: state.sessionId,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(state.userId)
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(jwtSecretKey)
+}
+
 // ── Upstream WS connection to wa-bridge ─────────────────────────────
 
-function connectUpstream(peer: WebSocketPeer, state: PeerState) {
+async function connectUpstream(peer: WebSocketPeer, state: PeerState) {
   const wsUrl = WA_BRIDGE_URL.replace(/^http/, 'ws')
-  const params = new URLSearchParams({
-    sessionId: state.sessionId,
-    ...(WA_BRIDGE_SECRET ? { token: WA_BRIDGE_SECRET } : {}),
-  })
-  const url = `${wsUrl}?${params.toString()}`
+  const url = `${wsUrl}?sessionId=${encodeURIComponent(state.sessionId)}`
 
-  const upstream = new WebSocket(url)
+  const token = await signBridgeToken(state)
+  const upstream = new WebSocket(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
   state.upstream = upstream
 
   upstream.on('open', () => {
@@ -167,18 +183,44 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
       if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid) break
       const text = data.text as string | null | undefined
       const isMedia = data.isMedia as boolean | undefined
+      const mediaType = (data.mediaType as string) ?? null
+      const thumbnail = (data.thumbnail as string) ?? null
       // Skip messages with no text AND no media (protocol messages)
       if (!text && !isMedia) break
+
+      const waMessageId = key?.id as string | undefined
+      const fromMe = data.fromMe as boolean
+      const timestamp = data.timestamp as number | undefined
+
+      // Persist to local DB so history stays fresh
+      if (waMessageId && timestamp) {
+        const senderId = fromMe ? state.userId : state.partnerId
+        db.insert(messages)
+          .values({
+            coupleId: state.coupleId,
+            waMessageId,
+            senderId,
+            text: text ?? null,
+            timestamp: new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp),
+            isMedia: isMedia ?? false,
+            mediaType,
+            source: 'baileys',
+          })
+          .onConflictDoNothing()
+          .catch(() => { /* best-effort local persistence */ })
+      }
+
       sendToPeer(peer, {
         type: 'message',
-        id: key?.id,
-        sender: data.fromMe ? 'You' : state.partnerName,
+        id: waMessageId,
+        sender: fromMe ? 'You' : state.partnerName,
         text: text ?? null,
-        timestamp: data.timestamp,
-        fromMe: data.fromMe,
-        waMessageId: key?.id,
+        timestamp,
+        fromMe,
+        waMessageId,
         isMedia: isMedia ?? false,
-        mediaType: (data.mediaType as string) ?? null,
+        mediaType,
+        ...(thumbnail ? { thumbnail } : {}),
       })
       break
     }
@@ -208,11 +250,21 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
     }
 
     case 'messages-persisted':
+      sendToPeer(peer, msg)
+      // Bridge just persisted messages to prod DB — pull them into local DB
+      syncMessagesFromProd(peer, state)
+      break
+
+    case 'resync-complete':
+      sendToPeer(peer, msg)
+      // Resync finished on prod — pull messages into local DB
+      syncMessagesFromProd(peer, state)
+      break
+
     case 'analysis-complete':
     case 'sent':
     case 'send-error':
     case 'resync-started':
-    case 'resync-complete':
     case 'resync-error':
       sendToPeer(peer, msg)
       break
@@ -221,6 +273,109 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
       // Forward unknown types as-is
       sendToPeer(peer, msg)
       break
+  }
+}
+
+// ── Sync messages from prod DB into local DB ───────────────────────
+
+async function syncMessagesFromProd(peer: WebSocketPeer, state: PeerState) {
+  const PROD_DB_URL = process.env.PROD_DATABASE_URL
+  if (!PROD_DB_URL) return
+
+  try {
+    const pg = await import('pg')
+    const pool = new pg.default.Pool({ connectionString: PROD_DB_URL, max: 2 })
+
+    // Check if local DB already has messages for this couple
+    const localCount = await db
+      .select({ timestamp: messages.timestamp })
+      .from(messages)
+      .where(eq(messages.coupleId, state.coupleId))
+      .limit(1)
+
+    if (localCount.length > 0) {
+      await pool.end()
+      return // Already have messages, skip full sync
+    }
+
+    // Find the prod couple that contains the same user (by matching session user's email)
+    const localUser = await db.query.users.findFirst({
+      where: eq(users.id, state.userId),
+      columns: { email: true },
+    })
+    if (!localUser) { await pool.end(); return }
+
+    // Look up the user in prod by email, then find their couple
+    const { rows: prodUsers } = await pool.query(
+      'SELECT id FROM users WHERE email = $1 LIMIT 1',
+      [localUser.email],
+    )
+    if (prodUsers.length === 0) { await pool.end(); return }
+
+    const prodUserId = prodUsers[0].id
+    const { rows: prodCouples } = await pool.query(
+      'SELECT id FROM couples WHERE (user_a_id = $1 OR user_b_id = $1) AND status = $2 LIMIT 1',
+      [prodUserId, 'active'],
+    )
+    if (prodCouples.length === 0) { await pool.end(); return }
+
+    const prodCoupleId = prodCouples[0].id
+
+    // Pull all messages from prod couple
+    const { rows } = await pool.query(
+      'SELECT * FROM messages WHERE couple_id = $1 ORDER BY timestamp ASC',
+      [prodCoupleId],
+    )
+
+    // Build a sender mapping: prod user IDs → local user IDs
+    const { rows: prodCoupleUsers } = await pool.query(
+      'SELECT id, email FROM users WHERE id IN (SELECT user_a_id FROM couples WHERE id = $1 UNION SELECT user_b_id FROM couples WHERE id = $1)',
+      [prodCoupleId],
+    )
+    const localPartner = await db.query.users.findFirst({
+      where: eq(users.id, state.partnerId),
+      columns: { id: true, email: true },
+    })
+
+    const senderMap = new Map<string, string>()
+    for (const pu of prodCoupleUsers) {
+      if (pu.email === localUser.email) {
+        senderMap.set(pu.id, state.userId)
+      } else if (localPartner && pu.email === localPartner.email) {
+        senderMap.set(pu.id, state.partnerId)
+      }
+    }
+
+    let inserted = 0
+    for (const m of rows) {
+      const localSenderId = senderMap.get(m.sender_id)
+      if (!localSenderId) continue
+      try {
+        await db.insert(messages)
+          .values({
+            coupleId: state.coupleId,
+            waMessageId: m.wa_message_id,
+            senderId: localSenderId,
+            text: m.text,
+            timestamp: m.timestamp,
+            sentiment: m.sentiment,
+            isMedia: m.is_media,
+            mediaType: m.media_type,
+            source: m.source,
+          })
+          .onConflictDoNothing()
+        inserted++
+      } catch { /* skip */ }
+    }
+
+    await pool.end()
+
+    if (inserted > 0) {
+      console.log(`[ws/chat] synced ${inserted} messages from prod for couple ${state.coupleId.slice(0, 8)}`)
+      handleLoadHistory(peer, state, { limit: 50 })
+    }
+  } catch (err) {
+    console.error('[ws/chat] prod sync failed:', err)
   }
 }
 
@@ -343,6 +498,7 @@ export default defineWebSocketHandler({
         coupleId: couple.id,
         sessionId: waSession.bridgeSessionId,
         userId,
+        partnerId,
         partnerJid: couple.whatsappJid ?? null,
         partnerName,
         heartbeatTimer: null,
@@ -358,6 +514,9 @@ export default defineWebSocketHandler({
 
       // ── Send initial history (server-initiated to avoid race) ──
       handleLoadHistory(peer, state, { limit: 50 })
+
+      // ── Sync from prod DB if local is empty ──
+      syncMessagesFromProd(peer, state)
     } catch (err) {
       console.error('[ws/chat] open error:', err)
       sendToPeer(peer, { type: 'error', message: 'Internal server error' })

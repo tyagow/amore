@@ -117,10 +117,18 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
             ? 'bg-coral-50 text-warm-900 rounded-br-md'
             : 'bg-warm-100 text-warm-900 rounded-bl-md'
         }`}>
-          <div className="flex items-center gap-2 py-1">
-            {mediaConfig.icon}
-            <span className="text-xs font-medium text-warm-500">{mediaConfig.label}</span>
-          </div>
+          {message.thumbnail ? (
+            <img
+              src={`data:image/jpeg;base64,${message.thumbnail}`}
+              className="rounded-lg max-w-full"
+              alt=""
+            />
+          ) : (
+            <div className="flex items-center gap-2 py-1">
+              {mediaConfig.icon}
+              <span className="text-xs font-medium text-warm-500">{mediaConfig.label}</span>
+            </div>
+          )}
           {message.text && (
             <p className="whitespace-pre-wrap break-words mt-1">{message.text}</p>
           )}

@@ -21,6 +21,7 @@ interface CoupleHeroProps {
   healthScore: number | null
   lastAnalyzed: string | Date | null
   messagesSinceAnalysis: number | null
+  whatsappConnected?: boolean
   myMood: MoodData | null
   partnerMood: MoodData | null
   sentimentByDay: SentimentDay[]
@@ -73,6 +74,7 @@ export function CoupleHero({
   healthScore,
   lastAnalyzed,
   messagesSinceAnalysis,
+  whatsappConnected,
   myMood,
   partnerMood,
   sentimentByDay,
@@ -103,6 +105,7 @@ export function CoupleHero({
             score={healthScore}
             lastAnalyzed={lastAnalyzed}
             messagesSinceAnalysis={messagesSinceAnalysis}
+            whatsappConnected={whatsappConnected}
             size={200}
           />
         </div>
@@ -111,6 +114,7 @@ export function CoupleHero({
             score={healthScore}
             lastAnalyzed={lastAnalyzed}
             messagesSinceAnalysis={messagesSinceAnalysis}
+            whatsappConnected={whatsappConnected}
             size={140}
           />
         </div>

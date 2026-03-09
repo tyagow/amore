@@ -6,7 +6,6 @@ import { detectMoodShift } from '@amore-couples/ai'
 import { log } from '../logger.js'
 
 const ANALYSIS_THRESHOLD = parseInt(process.env.ANALYSIS_THRESHOLD || '50', 10)
-const MIN_FIRST_ANALYSIS = 20 // Lower bar for first-ever analysis (history sync)
 const MOOD_CHECK_INTERVAL = 10
 
 // Prevent concurrent analysis for the same couple
@@ -41,10 +40,10 @@ export async function checkAndTriggerAnalysis(coupleId: string): Promise<void> {
 
   if (!couple) return
 
-  // First-ever analysis: trigger immediately once we have enough messages (skip threshold)
+  // First-ever analysis: trigger immediately after history sync (any messages at all)
   const isFirstAnalysis = couple.lastAnalyzed === null
   const shouldTrigger = isFirstAnalysis
-    ? couple.messagesSinceAnalysis >= MIN_FIRST_ANALYSIS
+    ? couple.messagesSinceAnalysis > 0
     : couple.messagesSinceAnalysis >= ANALYSIS_THRESHOLD
 
   if (shouldTrigger && !analysisInProgress.has(coupleId)) {

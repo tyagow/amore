@@ -5,7 +5,7 @@ import { runAnalysisPipeline } from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
 import { log } from '../logger.js'
 
-const MIN_MESSAGE_THRESHOLD = 20
+const MIN_MESSAGE_THRESHOLD = 5 // Low bar — history sync provides plenty of messages
 const MAX_MESSAGES = 500
 
 export async function runAnalysis(coupleId: string): Promise<void> {

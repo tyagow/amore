@@ -148,6 +148,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
             isMedia: data.isMedia as boolean | undefined,
             mediaType: data.mediaType as ChatMessage['mediaType'],
             waMessageId: data.waMessageId as string | undefined,
+            thumbnail: (data.thumbnail as string | null) ?? null,
           }
 
           setMessages((prev) => {

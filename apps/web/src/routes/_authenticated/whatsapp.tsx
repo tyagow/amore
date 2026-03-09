@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import QRCode from 'qrcode'
 import {
@@ -13,7 +13,8 @@ import type { WaContact } from '~/lib/wa-bridge'
 
 export const Route = createFileRoute('/_authenticated/whatsapp')({
   component: WhatsAppPage,
-  loader: async () => {
+  loader: async ({ context }) => {
+    if (!context.hasCouple) throw redirect({ to: '/connect' })
     const data = await getWaSessionStatus()
     return data
   },
@@ -29,6 +30,7 @@ type SessionState =
 
 function WhatsAppPage() {
   const { waSession, whatsappJid } = Route.useLoaderData()
+  const navigate = useNavigate()
   const [state, setState] = useState<SessionState>(() => {
     if (waSession && waSession.status === 'connected') {
       // If partner JID is already set, go to connected; otherwise start as idle
@@ -165,6 +167,7 @@ function WhatsAppPage() {
       await selectWaContact({ data: { waSessionId: state.waSessionId, contactJid: contact.jid } })
       hasPartnerJid.current = true
       setState({ phase: 'connected', waSessionId: state.waSessionId })
+      navigate({ to: '/dashboard' })
     } catch (err) {
       setState({
         phase: 'error',

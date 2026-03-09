@@ -10,12 +10,15 @@ import {
 } from '~/server/goals'
 
 export const Route = createFileRoute('/_authenticated/goals')({
-  loader: async () => {
+  loader: async ({ context }) => {
+    if (!context.hasCouple) {
+      return { hasCouple: false as const, active: [], completed: [] }
+    }
     const [active, completed] = await Promise.all([
       getActiveGoals(),
       getCompletedGoals(),
     ])
-    return { active, completed }
+    return { hasCouple: true as const, active, completed }
   },
   component: GoalsPage,
 })
@@ -32,6 +35,24 @@ interface GoalSuggestion {
 
 function GoalsPage() {
   const data = Route.useLoaderData()
+
+  if (!data.hasCouple) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="font-display text-3xl text-warm-900">Goals</h1>
+            <p className="text-warm-500 mt-1">Things you want to work on together</p>
+          </div>
+        </div>
+        <div className="bg-warm-100 rounded-2xl p-8 text-center">
+          <p className="text-warm-500 mb-4">Connect with your partner to set shared goals.</p>
+          <Link to="/connect" className="text-coral-500 font-medium hover:underline">Connect now</Link>
+        </div>
+      </div>
+    )
+  }
+
   const [activeGoals, setActiveGoals] = useState(data.active)
   const [completedGoals, setCompletedGoals] = useState(data.completed)
   const [showCompleted, setShowCompleted] = useState(false)

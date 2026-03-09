@@ -4,10 +4,11 @@ interface HealthRingProps {
   score: number | null
   lastAnalyzed?: string | Date | null
   messagesSinceAnalysis?: number | null
+  whatsappConnected?: boolean
   size?: number
 }
 
-export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, size: sizeProp }: HealthRingProps) {
+export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsappConnected, size: sizeProp }: HealthRingProps) {
   const size = sizeProp ?? 200
   const strokeWidth = 14
   const radius = (size - strokeWidth) / 2
@@ -79,7 +80,11 @@ export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, size: s
 
       <p className="text-sm text-warm-500">
         {score == null
-          ? 'Connect WhatsApp to get your score'
+          ? (messagesSinceAnalysis
+            ? 'Analyzing your messages…'
+            : whatsappConnected
+              ? 'Analyzing your relationship…'
+              : 'Connect WhatsApp to get your score')
           : score > 70
             ? 'Your relationship is thriving'
             : score > 40

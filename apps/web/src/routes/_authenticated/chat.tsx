@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useState, useCallback, useEffect } from 'react'
 import { getWaSessionStatus } from '~/server/wa-session'
 import { useChatWebSocket } from '~/hooks/use-chat-websocket'
@@ -13,7 +13,8 @@ import { LoggedOutOverlay } from './-components/chat/logged-out-overlay'
 
 export const Route = createFileRoute('/_authenticated/chat')({
   component: ChatPage,
-  loader: async () => {
+  loader: async ({ context }) => {
+    if (!context.hasCouple) throw redirect({ to: '/connect' })
     const data = await getWaSessionStatus()
     return { waSession: data.waSession }
   },
@@ -26,7 +27,7 @@ function ChatPage() {
   // If no WA session, redirect to setup
   if (!waSession || waSession.status !== 'connected') {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100dvh-57px)] px-6">
+      <div className="flex flex-col items-center justify-center h-dvh -mb-20 md:mb-0 px-6">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warm-100 flex items-center justify-center">
             <svg className="w-8 h-8 text-warm-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -135,7 +136,7 @@ function ChatPageConnected() {
   }, [review, clearReview])
 
   return (
-    <div className="flex h-[calc(100dvh-57px)] relative">
+    <div className="flex h-dvh -mb-20 md:mb-0 relative">
       {/* Logged out overlay */}
       {isLoggedOut && <LoggedOutOverlay />}
 

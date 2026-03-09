@@ -8,8 +8,10 @@ import {
   moodStates,
   coupleGoals,
 } from '@amore-couples/db/schema'
-import { eq, and, desc, inArray, sql } from 'drizzle-orm'
-import { triggerBridgeAnalysis } from '~/lib/wa-bridge'
+import { eq, and, desc, asc, inArray, sql } from 'drizzle-orm'
+import { messages, couples as couplesTable } from '@amore-couples/db/schema'
+import { runAnalysisPipeline } from '@amore-couples/ai'
+import type { Message } from '@amore-couples/types'
 
 /**
  * Unified intelligence data shared across dashboard and chat.
@@ -181,20 +183,110 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
 )
 
 /**
- * Manually trigger the analysis pipeline for the authenticated user's couple.
- * Used when the dashboard has no health score yet (first-time setup).
+ * Run the analysis pipeline directly against the local DB.
+ * No bridge dependency — works in both dev and prod.
  */
 export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
   async () => {
     const { couple } = await requireCouple()
 
     try {
-      await triggerBridgeAnalysis(couple.id)
-      return { status: 'analysis_started', coupleId: couple.id }
+      // Fetch user names for AI context
+      const [userA, userB] = await Promise.all([
+        db.query.users.findFirst({
+          where: eq(users.id, couple.userAId),
+          columns: { name: true },
+        }),
+        db.query.users.findFirst({
+          where: eq(users.id, couple.userBId),
+          columns: { name: true },
+        }),
+      ])
+
+      // Fetch messages directly from local DB
+      const dbMessages = await db
+        .select({
+          id: messages.id,
+          coupleId: messages.coupleId,
+          waMessageId: messages.waMessageId,
+          senderId: messages.senderId,
+          text: messages.text,
+          timestamp: messages.timestamp,
+          sentiment: messages.sentiment,
+          isMedia: messages.isMedia,
+          source: messages.source,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .where(eq(messages.coupleId, couple.id))
+        .orderBy(asc(messages.timestamp))
+        .limit(500)
+
+      if (dbMessages.length < 5) {
+        return { status: 'error', error: `Only ${dbMessages.length} messages — need at least 5` }
+      }
+
+      const parsed: Message[] = dbMessages
+        .filter((m) => m.text !== null)
+        .map((m) => ({
+          id: m.id,
+          coupleId: m.coupleId,
+          waMessageId: m.waMessageId,
+          senderId: m.senderId,
+          text: m.text,
+          timestamp: m.timestamp,
+          sentiment: m.sentiment,
+          isMedia: m.isMedia,
+          source: m.source as 'baileys',
+          createdAt: m.createdAt,
+        }))
+
+      const output = await runAnalysisPipeline(parsed, couple.id, undefined, userA, userB)
+
+      // Persist results
+      await db.transaction(async (tx) => {
+        await tx.delete(insights).where(eq(insights.coupleId, couple.id))
+
+        if (output.insightRows.length > 0) {
+          await tx.insert(insights).values(output.insightRows)
+        }
+
+        await tx
+          .update(couplesTable)
+          .set({
+            healthScore: output.healthScore,
+            lastAnalyzed: new Date(),
+            messagesSinceAnalysis: 0,
+          })
+          .where(eq(couplesTable.id, couple.id))
+
+        for (const userId of [couple.userAId, couple.userBId]) {
+          await tx.insert(userRelationshipProfiles)
+            .values({
+              coupleId: couple.id,
+              userId,
+              loveLanguages: output.profileData.loveLanguages,
+              communicationStyle: output.profileData.communicationStyle,
+              interests: output.profileData.interests,
+              updatedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: [userRelationshipProfiles.coupleId, userRelationshipProfiles.userId],
+              set: {
+                loveLanguages: output.profileData.loveLanguages,
+                communicationStyle: output.profileData.communicationStyle,
+                interests: output.profileData.interests,
+                updatedAt: new Date(),
+              },
+            })
+        }
+      })
+
+      return { status: 'analysis_complete', coupleId: couple.id, healthScore: output.healthScore }
     } catch (err) {
       return {
         status: 'error',
-        error: err instanceof Error ? err.message : 'Failed to trigger analysis',
+        error: err instanceof Error ? err.message : 'Failed to run analysis',
       }
     }
   },

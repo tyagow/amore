@@ -1,19 +1,23 @@
 import { Hono } from 'hono'
-import { bearerAuth } from 'hono/bearer-auth'
 import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { WebSocketServer, WebSocket } from 'ws'
 import { Pool } from 'pg'
+import { jwtVerify } from 'jose'
 import { SessionManager } from './sessions/manager.js'
 import { extractMessageText, getMediaType } from './messages/ingest.js'
 import { log } from './logger.js'
 
-// Validate required env vars
-const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET
-if (!WA_BRIDGE_SECRET) {
-  log.fatal('WA_BRIDGE_SECRET environment variable is required')
+// Validate required env vars — at least one auth method must be configured
+const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || ''
+const WA_BRIDGE_JWT_SECRET = process.env.WA_BRIDGE_JWT_SECRET
+if (!WA_BRIDGE_JWT_SECRET && !WA_BRIDGE_SECRET) {
+  log.fatal('WA_BRIDGE_JWT_SECRET or WA_BRIDGE_SECRET environment variable is required')
   process.exit(1)
 }
+const jwtSecretKey = WA_BRIDGE_JWT_SECRET
+  ? new TextEncoder().encode(WA_BRIDGE_JWT_SECRET)
+  : null
 
 const PORT = parseInt(process.env.PORT || process.env.WA_BRIDGE_PORT || '9945')
 const WEB_APP_URL = process.env.WEB_APP_URL || 'http://localhost:9941'
@@ -35,10 +39,30 @@ app.use(
 // Health endpoint (unprotected, before auth middleware)
 app.get('/health', (c) => c.json({ ok: true }))
 
-// Bearer token auth on all /sessions and /analysis routes
-app.use('/sessions/*', bearerAuth({ token: WA_BRIDGE_SECRET }))
-app.use('/sessions', bearerAuth({ token: WA_BRIDGE_SECRET }))
-app.use('/analysis/*', bearerAuth({ token: WA_BRIDGE_SECRET }))
+// Auth middleware: accepts JWT (Authorization: Bearer <jwt>) or legacy static token
+const authMiddleware = async (c: any, next: any) => {
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401)
+
+  const token = authHeader.slice(7)
+
+  // Try JWT first
+  if (jwtSecretKey) {
+    try {
+      await jwtVerify(token, jwtSecretKey)
+      return next()
+    } catch { /* fall through to legacy */ }
+  }
+
+  // Legacy static token fallback
+  if (WA_BRIDGE_SECRET && token === WA_BRIDGE_SECRET) return next()
+
+  return c.json({ error: 'Unauthorized' }, 401)
+}
+
+app.use('/sessions/*', authMiddleware)
+app.use('/sessions', authMiddleware)
+app.use('/analysis/*', authMiddleware)
 
 // Track cumulative persisted message counts per couple
 const messageCounts = new Map<string, number>()
@@ -84,6 +108,7 @@ manager.on('message', ({ sessionId, messages }) => {
         text: msg.message ? extractMessageText(msg.message) : null,
         isMedia: !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage || msg.message?.documentMessage || msg.message?.stickerMessage),
         mediaType: msg.message ? getMediaType(msg.message) : null,
+        thumbnail: msg.message?.imageMessage?.jpegThumbnail?.toString('base64') || msg.message?.videoMessage?.jpegThumbnail?.toString('base64') || null,
         timestamp: msg.messageTimestamp,
         fromMe: msg.key.fromMe,
       },
@@ -298,19 +323,42 @@ const server = serve({ fetch: app.fetch, port: PORT }, async () => {
 // WebSocket server on same port
 const wss = new WebSocketServer({ server: server as any })
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', async (ws, req) => {
   const url = new URL(req.url || '', `http://localhost:${PORT}`)
   const sessionId = url.searchParams.get('sessionId')
-  const token = url.searchParams.get('token')
-
-  // Authenticate WebSocket connection
-  if (token !== WA_BRIDGE_SECRET) {
-    ws.close(4003, 'Invalid or missing token')
-    return
-  }
 
   if (!sessionId) {
     ws.close(4001, 'Missing sessionId')
+    return
+  }
+
+  // Authenticate — JWT (Authorization header) or legacy token (query param)
+  const authHeader = req.headers['authorization']
+  let authenticated = false
+
+  if (authHeader?.startsWith('Bearer ') && jwtSecretKey) {
+    try {
+      const token = authHeader.slice(7)
+      const { payload } = await jwtVerify(token, jwtSecretKey)
+      if (payload.sessionId !== sessionId) {
+        log.warn({ claimed: payload.sessionId, requested: sessionId }, 'JWT sessionId mismatch')
+        ws.close(4003, 'Unauthorized')
+        return
+      }
+      authenticated = true
+    } catch (err) {
+      log.warn({ err }, 'JWT verification failed')
+    }
+  }
+
+  // Fallback: legacy static token (query param)
+  if (!authenticated && WA_BRIDGE_SECRET) {
+    const token = url.searchParams.get('token')
+    if (token === WA_BRIDGE_SECRET) authenticated = true
+  }
+
+  if (!authenticated) {
+    ws.close(4003, 'Unauthorized')
     return
   }
 
