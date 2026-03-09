@@ -7,7 +7,11 @@
  */
 import pg from 'pg'
 
-const PROD_DB_URL = 'postgresql://postgres:REDACTED_DB_PASSWORD@shuttle.proxy.rlwy.net:11432/railway'
+const PROD_DB_URL = process.env.PROD_DATABASE_URL
+if (!PROD_DB_URL) {
+  console.error('PROD_DATABASE_URL not set — add it to .env.local')
+  process.exit(1)
+}
 const LOCAL_DB_URL = process.env.DATABASE_URL
 
 if (!LOCAL_DB_URL) {

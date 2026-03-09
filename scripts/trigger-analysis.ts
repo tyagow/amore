@@ -7,10 +7,12 @@
  * Options:
  *   --email         (required) User email to look up
  *   --bridge-url    Bridge URL (default: production)
- *   --bridge-secret Bridge auth token (default: env WA_BRIDGE_SECRET or hardcoded prod value)
- *   --db-url        Database URL (default: env DATABASE_URL or hardcoded prod value)
+ *   --db-url        Database URL (default: env DATABASE_URL)
+ *
+ * Requires WA_BRIDGE_JWT_SECRET env var for bridge auth.
  */
 import pg from 'pg'
+import { SignJWT } from 'jose'
 
 // ── Parse CLI args ──────────────────────────────────────
 
@@ -30,13 +32,20 @@ if (!email) {
 const bridgeUrl = getArg('bridge-url')
   ?? 'https://wa-bridge-production-4da8.up.railway.app'
 
-const bridgeSecret = getArg('bridge-secret')
-  ?? process.env.WA_BRIDGE_SECRET
-  ?? 'REDACTED_OLD_SECRET'
+const jwtSecret = process.env.WA_BRIDGE_JWT_SECRET
+if (!jwtSecret) {
+  console.error('ERROR: WA_BRIDGE_JWT_SECRET env var is required')
+  process.exit(1)
+}
+const jwtSecretKey = new TextEncoder().encode(jwtSecret)
 
 const dbUrl = getArg('db-url')
   ?? process.env.DATABASE_URL
-  ?? 'postgresql://postgres:REDACTED_DB_PASSWORD@shuttle.proxy.rlwy.net:11432/railway'
+
+if (!dbUrl) {
+  console.error('ERROR: --db-url or DATABASE_URL env var is required')
+  process.exit(1)
+}
 
 // ── Main ────────────────────────────────────────────────
 
@@ -121,10 +130,17 @@ async function main() {
     console.log(`Triggering analysis for couple ${couple.id}...`)
     const url = `${bridgeUrl}/analysis/${couple.id}`
 
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject('script:trigger-analysis')
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(jwtSecretKey)
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${bridgeSecret}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     })
