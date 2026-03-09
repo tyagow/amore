@@ -1,12 +1,25 @@
+import { SignJWT } from 'jose'
+
 const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9945'
-const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || ''
+const WA_BRIDGE_JWT_SECRET = process.env.WA_BRIDGE_JWT_SECRET || ''
+const jwtSecretKey = new TextEncoder().encode(WA_BRIDGE_JWT_SECRET)
+
+async function signBridgeToken(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject('web-server')
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(jwtSecretKey)
+}
 
 async function bridgeFetch(path: string, options: RequestInit = {}) {
+  const token = await signBridgeToken()
   const res = await fetch(`${WA_BRIDGE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${WA_BRIDGE_SECRET}`,
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
   })

@@ -8,16 +8,13 @@ import { SessionManager } from './sessions/manager.js'
 import { extractMessageText, getMediaType } from './messages/ingest.js'
 import { log } from './logger.js'
 
-// Validate required env vars — at least one auth method must be configured
-const WA_BRIDGE_SECRET = process.env.WA_BRIDGE_SECRET || ''
+// Validate required env vars
 const WA_BRIDGE_JWT_SECRET = process.env.WA_BRIDGE_JWT_SECRET
-if (!WA_BRIDGE_JWT_SECRET && !WA_BRIDGE_SECRET) {
-  log.fatal('WA_BRIDGE_JWT_SECRET or WA_BRIDGE_SECRET environment variable is required')
+if (!WA_BRIDGE_JWT_SECRET) {
+  log.fatal('WA_BRIDGE_JWT_SECRET environment variable is required')
   process.exit(1)
 }
-const jwtSecretKey = WA_BRIDGE_JWT_SECRET
-  ? new TextEncoder().encode(WA_BRIDGE_JWT_SECRET)
-  : null
+const jwtSecretKey = new TextEncoder().encode(WA_BRIDGE_JWT_SECRET)
 
 const PORT = parseInt(process.env.PORT || process.env.WA_BRIDGE_PORT || '9945')
 const WEB_APP_URL = process.env.WEB_APP_URL || 'http://localhost:9941'
@@ -39,25 +36,17 @@ app.use(
 // Health endpoint (unprotected, before auth middleware)
 app.get('/health', (c) => c.json({ ok: true }))
 
-// Auth middleware: accepts JWT (Authorization: Bearer <jwt>) or legacy static token
+// Auth middleware: JWT verification (Authorization: Bearer <jwt>)
 const authMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header('Authorization')
   if (!authHeader?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401)
 
-  const token = authHeader.slice(7)
-
-  // Try JWT first
-  if (jwtSecretKey) {
-    try {
-      await jwtVerify(token, jwtSecretKey)
-      return next()
-    } catch { /* fall through to legacy */ }
+  try {
+    await jwtVerify(authHeader.slice(7), jwtSecretKey)
+    return next()
+  } catch {
+    return c.json({ error: 'Unauthorized' }, 401)
   }
-
-  // Legacy static token fallback
-  if (WA_BRIDGE_SECRET && token === WA_BRIDGE_SECRET) return next()
-
-  return c.json({ error: 'Unauthorized' }, 401)
 }
 
 app.use('/sessions/*', authMiddleware)
@@ -332,32 +321,23 @@ wss.on('connection', async (ws, req) => {
     return
   }
 
-  // Authenticate — JWT (Authorization header) or legacy token (query param)
+  // Authenticate via JWT (Authorization header)
   const authHeader = req.headers['authorization']
-  let authenticated = false
+  if (!authHeader?.startsWith('Bearer ')) {
+    ws.close(4003, 'Unauthorized')
+    return
+  }
 
-  if (authHeader?.startsWith('Bearer ') && jwtSecretKey) {
-    try {
-      const token = authHeader.slice(7)
-      const { payload } = await jwtVerify(token, jwtSecretKey)
-      if (payload.sessionId !== sessionId) {
-        log.warn({ claimed: payload.sessionId, requested: sessionId }, 'JWT sessionId mismatch')
-        ws.close(4003, 'Unauthorized')
-        return
-      }
-      authenticated = true
-    } catch (err) {
-      log.warn({ err }, 'JWT verification failed')
+  try {
+    const token = authHeader.slice(7)
+    const { payload } = await jwtVerify(token, jwtSecretKey)
+    if (payload.sessionId !== sessionId) {
+      log.warn({ claimed: payload.sessionId, requested: sessionId }, 'JWT sessionId mismatch')
+      ws.close(4003, 'Unauthorized')
+      return
     }
-  }
-
-  // Fallback: legacy static token (query param)
-  if (!authenticated && WA_BRIDGE_SECRET) {
-    const token = url.searchParams.get('token')
-    if (token === WA_BRIDGE_SECRET) authenticated = true
-  }
-
-  if (!authenticated) {
+  } catch (err) {
+    log.warn({ err }, 'JWT verification failed')
     ws.close(4003, 'Unauthorized')
     return
   }
