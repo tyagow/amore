@@ -21,17 +21,23 @@ export const analysisResultSchema = z.object({
   summary: z.string().min(1),
 })
 
-// AI sometimes returns wishes as plain strings instead of objects
-const flexibleWish = z.union([
-  z.object({ text: z.string(), date: z.string(), speaker: z.string() }),
-  z.string().transform((s) => ({ text: s, date: '', speaker: '' })),
-])
+// Coerce any value to a string (handles objects, arrays, primitives)
+const coerceString = z.any().transform((v) =>
+  typeof v === 'string' ? v : JSON.stringify(v),
+)
 
-// AI sometimes adds extra fields like "evidence" to love languages — strip them
-const flexibleLoveLanguage = z.object({
-  language: z.string(),
-  confidence: z.number().min(0).max(1),
-}).strip()
+// AI returns wishes in many formats: strings, objects with varying fields
+const flexibleWish = z.any().transform((v) => {
+  if (typeof v === 'string') return { text: v, date: '', speaker: '' }
+  if (v && typeof v === 'object') {
+    return {
+      text: String(v.text ?? v.wish ?? v.description ?? JSON.stringify(v)),
+      date: String(v.date ?? ''),
+      speaker: String(v.speaker ?? ''),
+    }
+  }
+  return { text: String(v), date: '', speaker: '' }
+})
 
 export const extractedEntitiesSchema = z.object({
   wishes: z.array(flexibleWish),
@@ -39,8 +45,11 @@ export const extractedEntitiesSchema = z.object({
     description: z.string(),
     date: z.string(),
   })),
-  interests: z.array(z.string()),
-  loveLanguages: z.array(flexibleLoveLanguage),
+  interests: z.array(coerceString),
+  loveLanguages: z.array(z.object({
+    language: z.string(),
+    confidence: z.number().min(0).max(1),
+  }).strip()),
 })
 
 export const coachingTipsSchema = z.array(z.object({
