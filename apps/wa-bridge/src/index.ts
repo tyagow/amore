@@ -4,6 +4,9 @@ import { serve } from '@hono/node-server'
 import { WebSocketServer, WebSocket } from 'ws'
 import { Pool } from 'pg'
 import { jwtVerify } from 'jose'
+import { eq, and } from 'drizzle-orm'
+import { db } from '@amore-couples/db/client'
+import { messageMedia } from '@amore-couples/db/schema'
 import { SessionManager } from './sessions/manager.js'
 import { extractMessageText, getMediaType } from './messages/ingest.js'
 import { log } from './logger.js'
@@ -280,6 +283,51 @@ app.post('/analysis/:coupleId', async (c) => {
   } catch (err) {
     log.error({ err }, 'POST /analysis/:coupleId failed')
     return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
+// ── Media serving ────────────────────────────────────────────
+app.get('/media/:waMessageId', async (c) => {
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  try {
+    const token = authHeader.slice(7)
+    const { payload } = await jwtVerify(token, jwtSecretKey)
+    const coupleId = payload.coupleId as string
+    if (!coupleId) return c.json({ error: 'Invalid token' }, 401)
+
+    const waMessageId = c.req.param('waMessageId')
+
+    const [media] = await db
+      .select({
+        data: messageMedia.data,
+        mimeType: messageMedia.mimeType,
+      })
+      .from(messageMedia)
+      .where(
+        and(
+          eq(messageMedia.waMessageId, waMessageId),
+          eq(messageMedia.coupleId, coupleId),
+        ),
+      )
+      .limit(1)
+
+    if (!media) {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const buffer = Buffer.from(media.data, 'base64')
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': media.mimeType,
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'private, max-age=86400',
+      },
+    })
+  } catch {
+    return c.json({ error: 'Unauthorized' }, 401)
   }
 })
 

@@ -204,6 +204,7 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
             timestamp: new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp),
             isMedia: isMedia ?? false,
             mediaType,
+            thumbnail: thumbnail ?? null,
             source: 'baileys',
           })
           .onConflictDoNothing()
@@ -361,6 +362,7 @@ async function syncMessagesFromProd(peer: WebSocketPeer, state: PeerState) {
             sentiment: m.sentiment,
             isMedia: m.is_media,
             mediaType: m.media_type,
+            thumbnail: m.thumbnail,
             source: m.source,
           })
           .onConflictDoNothing()
@@ -402,6 +404,7 @@ async function handleLoadHistory(
         timestamp: messages.timestamp,
         isMedia: messages.isMedia,
         mediaType: messages.mediaType,
+        thumbnail: messages.thumbnail,
         waMessageId: messages.waMessageId,
       })
       .from(messages)
@@ -420,6 +423,7 @@ async function handleLoadHistory(
         fromMe: m.senderId === state.userId,
         isMedia: m.isMedia,
         mediaType: m.mediaType,
+        thumbnail: m.thumbnail,
         waMessageId: m.waMessageId,
       }))
 

@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ChatMessage } from '~/types/chat'
+import { MediaLightbox } from './media-lightbox'
 
 function SpinnerIcon() {
   return (
@@ -96,6 +97,8 @@ function getMediaConfig(mediaType?: string | null) {
 }
 
 export function MessageBubble({ message }: { message: ChatMessage }) {
+  const [showLightbox, setShowLightbox] = useState(false)
+
   const time = useMemo(() => {
     const d =
       message.timestamp instanceof Date
@@ -110,31 +113,51 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
   if (message.isMedia) {
     const mediaConfig = getMediaConfig(message.mediaType)
+    const hasFullMedia = message.waMessageId && (message.mediaType === 'image' || message.mediaType === 'video' || message.mediaType === 'sticker')
+
     return (
-      <div className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} mb-1`}>
-        <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-          isFromMe
-            ? 'bg-coral-50 text-warm-900 rounded-br-md'
-            : 'bg-warm-100 text-warm-900 rounded-bl-md'
-        }`}>
-          {message.thumbnail ? (
-            <img
-              src={`data:image/jpeg;base64,${message.thumbnail}`}
-              className="rounded-lg max-w-full"
-              alt=""
-            />
-          ) : (
-            <div className="flex items-center gap-2 py-1">
-              {mediaConfig.icon}
-              <span className="text-xs font-medium text-warm-500">{mediaConfig.label}</span>
-            </div>
-          )}
-          {message.text && (
-            <p className="whitespace-pre-wrap break-words mt-1">{message.text}</p>
-          )}
-          <span className="text-[10px] text-warm-400 mt-1 block text-right">{time}</span>
+      <>
+        <div className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} mb-1`}>
+          <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+            isFromMe
+              ? 'bg-coral-50 text-warm-900 rounded-br-md'
+              : 'bg-warm-100 text-warm-900 rounded-bl-md'
+          }`}>
+            {message.thumbnail ? (
+              <img
+                src={`data:image/jpeg;base64,${message.thumbnail}`}
+                className={`rounded-lg max-w-full ${hasFullMedia ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                alt=""
+                onClick={hasFullMedia ? () => setShowLightbox(true) : undefined}
+              />
+            ) : hasFullMedia ? (
+              <div
+                className="flex items-center gap-2 py-1 cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={() => setShowLightbox(true)}
+              >
+                {mediaConfig.icon}
+                <span className="text-xs font-medium text-warm-500">{mediaConfig.label}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-1">
+                {mediaConfig.icon}
+                <span className="text-xs font-medium text-warm-500">{mediaConfig.label}</span>
+              </div>
+            )}
+            {message.text && (
+              <p className="whitespace-pre-wrap break-words mt-1">{message.text}</p>
+            )}
+            <span className="text-[10px] text-warm-400 mt-1 block text-right">{time}</span>
+          </div>
         </div>
-      </div>
+        {showLightbox && hasFullMedia && (
+          <MediaLightbox
+            waMessageId={message.waMessageId!}
+            mediaType={message.mediaType!}
+            onClose={() => setShowLightbox(false)}
+          />
+        )}
+      </>
     )
   }
 

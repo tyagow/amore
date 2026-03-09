@@ -4,6 +4,7 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   Browsers,
   proto,
+  type WAMessage,
   type WAMessageKey,
   type WASocket,
 } from '@whiskeysockets/baileys'
@@ -12,8 +13,10 @@ import {
   persistMessages,
   handleMessageRevoke,
   getOldestMessage,
+  getMediaType,
   type NormalizedMessage,
 } from '../messages/ingest.js'
+import { downloadAndStoreMedia } from '../messages/media.js'
 import { Boom } from '@hapi/boom'
 import { Pool } from 'pg'
 import { EventEmitter } from 'events'
@@ -462,6 +465,18 @@ export class SessionManager extends EventEmitter {
         this.emit('messages-persisted', { sessionId, coupleId: binding.coupleId, count })
       }
     }
+
+    // Fire-and-forget: download and store media for media messages
+    const session = this.sessions.get(sessionId)
+    if (session) {
+      for (const msg of msgs) {
+        const mediaType = msg.message ? getMediaType(msg.message) : null
+        if (mediaType) {
+          downloadAndStoreMedia(msg as WAMessage, binding.coupleId, session.socket)
+            .catch(() => { /* already logged inside */ })
+        }
+      }
+    }
   }
 
   /**
@@ -524,6 +539,7 @@ export class SessionManager extends EventEmitter {
         timestamp: new Date(timestamp * 1000),
         isMedia: false,
         mediaType: null,
+        thumbnail: null,
         source: 'baileys',
       }]).catch((err) => log.error({ err, sessionId, jid }, 'Failed to persist sent message'))
 

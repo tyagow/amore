@@ -96,6 +96,7 @@ export const messages = pgTable('messages', {
   sentiment: real('sentiment'),
   isMedia: boolean('is_media').notNull().default(false),
   mediaType: varchar('media_type', { length: 20 }),
+  thumbnail: text('thumbnail'),  // base64 JPEG thumbnail from Baileys
   source: varchar('source', { length: 20 }).notNull().default('baileys'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => [
@@ -104,6 +105,20 @@ export const messages = pgTable('messages', {
   uniqueIndex('messages_wa_id_unique')
     .on(table.coupleId, table.waMessageId)
     .where(sql`wa_message_id IS NOT NULL`),
+])
+
+// ── Message Media (full-resolution media files) ──────────
+export const messageMedia = pgTable('message_media', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  waMessageId: varchar('wa_message_id', { length: 255 }).notNull(),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id),
+  data: text('data').notNull(),          // base64-encoded media binary
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  fileSize: integer('file_size').notNull(),  // original size in bytes
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('message_media_wa_id_unique')
+    .on(table.coupleId, table.waMessageId),
 ])
 
 // ── Mood States ─────────────────────────────────────────

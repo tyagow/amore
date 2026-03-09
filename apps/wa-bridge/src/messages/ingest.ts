@@ -17,6 +17,7 @@ export interface NormalizedMessage {
   timestamp: Date
   isMedia: boolean
   mediaType: string | null
+  thumbnail: string | null  // base64 JPEG thumbnail
   source: 'baileys'
 }
 
@@ -79,6 +80,16 @@ export function normalizeMessage(
     msg.message.stickerMessage
   )
 
+  // Extract JPEG thumbnail for image/video/sticker
+  const jpegThumbnail =
+    msg.message.imageMessage?.jpegThumbnail ||
+    msg.message.videoMessage?.jpegThumbnail ||
+    msg.message.stickerMessage?.pngThumbnail ||
+    null
+  const thumbnail = jpegThumbnail
+    ? Buffer.from(jpegThumbnail).toString('base64')
+    : null
+
   const ts =
     typeof msg.messageTimestamp === 'number'
       ? msg.messageTimestamp
@@ -93,6 +104,7 @@ export function normalizeMessage(
     timestamp: new Date(ts * 1000),
     isMedia,
     mediaType,
+    thumbnail,
     source: 'baileys',
   }
 }
