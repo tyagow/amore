@@ -35,7 +35,7 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
 
   // Show the most recent coaching insight
   const latest = visible[0]
-  const { tips, alertPartnerName, moodLevel, moodNote } = latest.content
+  const { tips = [], alertPartnerName, moodLevel, moodNote } = latest.content ?? {}
   const moodDescription = MOOD_LABEL[moodLevel] ?? `feeling ${moodLevel}`
 
   return (
