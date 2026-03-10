@@ -312,3 +312,56 @@ export async function generateThreadTitle(firstMessage: string): Promise<string>
     return 'Coaching session'
   }
 }
+
+const coachStarterSchema = z.object({
+  insight: z.string().min(1).max(500),
+  suggestions: z.array(z.string().min(1).max(100)).min(2).max(4),
+})
+
+export interface CoachStarter {
+  insight: string
+  suggestions: string[]
+}
+
+export async function generateCoachStarter(
+  recentMessages: Array<{ sender: string; text: string }>,
+): Promise<CoachStarter> {
+  const client = getClient()
+
+  const formatted = recentMessages
+    .map((m) => `[${m.sender}] ${m.text}`)
+    .join('\n')
+
+  try {
+    return await withRetry(async () => {
+      const response = await client.messages.create({
+        model: FAST_MODEL,
+        max_tokens: 250,
+        system: `You are a relationship coach reviewing a couple's recent WhatsApp messages.
+
+Return a JSON object with:
+- "insight": A brief observation (1-2 sentences) about the conversation tone, topic, or dynamic. Be specific to what you see, not generic.
+- "suggestions": 3-4 short action prompts (5-10 words each) the user could tap to start a coaching conversation. Make them specific to the message content.
+
+Examples of good suggestions: "Ask about her work stress", "Respond to the weekend plan", "Check in on how she's feeling", "Discuss the budget conversation"
+
+Return ONLY valid JSON, no markdown.`,
+        messages: [
+          { role: 'user', content: `Recent messages:\n${formatted}` },
+        ],
+      })
+
+      const text = response.content[0]?.type === 'text' ? response.content[0].text : '{}'
+      return parseValidatedResponse(text, coachStarterSchema)
+    })
+  } catch {
+    return {
+      insight: "I can see your recent conversation. Ask me anything about how it's going or what to say next.",
+      suggestions: [
+        'Help me reply thoughtfully',
+        'How is our communication today?',
+        'Suggest something nice to say',
+      ],
+    }
+  }
+}
