@@ -50,6 +50,15 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
   connectionStatusRef.current = connectionStatus
   hasMoreRef.current = hasMore
 
+  const reloadHistory = useCallback(() => {
+    setMessages([])
+    setHasMore(false)
+    const currentWs = wsRef.current
+    if (currentWs && currentWs.readyState === WebSocket.OPEN) {
+      currentWs.send(JSON.stringify({ type: 'load-history', limit: 50 }))
+    }
+  }, [])
+
   const connect = useCallback(() => {
     if (!mountedRef.current) return
 
@@ -241,6 +250,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
           // Baileys echo for fromMe messages — backup confirmation
           // when the direct `sent` response was lost (e.g. bridge restart)
           const echoWaId = data.waMessageId as string | undefined
+          const echoTimestamp = data.timestamp as string | number | undefined
           if (echoWaId) {
             setMessages((prev) => {
               // First try exact match by waMessageId
@@ -270,7 +280,20 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
                 }
                 return updated
               }
-              return prev
+              // No match found — this was sent from WhatsApp directly, create new message
+              return [...prev, {
+                id: echoWaId,
+                sender: 'You',
+                text: null, // Text not available in echo, will be filled by DB poll
+                timestamp: echoTimestamp
+                  ? (typeof echoTimestamp === 'number'
+                    ? new Date(echoTimestamp * 1000).toISOString()
+                    : String(echoTimestamp))
+                  : new Date().toISOString(),
+                fromMe: true,
+                waMessageId: echoWaId,
+                status: 'sent' as const,
+              }]
             })
           }
           break
@@ -295,9 +318,14 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
         }
 
         case 'connection-status': {
-          setConnectionStatus(data.status as ConnectionStatus)
+          const nextStatus = data.status as ConnectionStatus
+          setConnectionStatus(nextStatus)
           if (data.partnerName) {
             setPartnerName(data.partnerName as string)
+          }
+          if (isResyncing && nextStatus === 'connected') {
+            setIsResyncing(false)
+            reloadHistory()
           }
           break
         }
@@ -308,17 +336,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
 
         case 'resync-complete':
           setIsResyncing(false)
-          // Clear and reload from scratch so resynced messages appear
-          setMessages([])
-          setHasMore(false)
-          {
-            const currentWs = wsRef.current
-            if (currentWs && currentWs.readyState === WebSocket.OPEN) {
-              currentWs.send(
-                JSON.stringify({ type: 'load-history', limit: 50 }),
-              )
-            }
-          }
+          reloadHistory()
           break
 
         case 'resync-error':
@@ -369,7 +387,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
       // Close event will fire after error, triggering reconnect
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isResyncing, reloadHistory])
 
   const scheduleReconnect = useCallback(() => {
     if (!mountedRef.current) return

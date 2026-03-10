@@ -16,7 +16,7 @@ import WebSocket from 'ws'
 import { SignJWT } from 'jose'
 import { db } from '@amore-couples/db'
 import { waSessions, couples, messages, users } from '@amore-couples/db/schema'
-import { eq, or, and, lt, desc } from 'drizzle-orm'
+import { eq, or, and, lt, gt, desc } from 'drizzle-orm'
 import { auth } from '../../../src/lib/auth'
 
 const WA_BRIDGE_URL = process.env.WA_BRIDGE_URL || 'http://localhost:9945'
@@ -34,6 +34,7 @@ interface PeerState {
   partnerName: string        // Display name of the partner
   heartbeatTimer: ReturnType<typeof setInterval> | null
   pongTimer: ReturnType<typeof setTimeout> | null
+  pollTimer: ReturnType<typeof setInterval> | null
   reconnectAttempt: number
   closed: boolean
 }
@@ -56,6 +57,7 @@ function cleanupPeer(peerId: string) {
   state.closed = true
   if (state.heartbeatTimer) clearInterval(state.heartbeatTimer)
   if (state.pongTimer) clearTimeout(state.pongTimer)
+  if (state.pollTimer) clearInterval(state.pollTimer)
   if (state.upstream && state.upstream.readyState === WebSocket.OPEN) {
     state.upstream.close(1000, 'browser disconnected')
   }
@@ -90,9 +92,15 @@ async function connectUpstream(peer: WebSocketPeer, state: PeerState) {
 
   upstream.on('open', () => {
     console.log(`[ws/chat] upstream connected for peer ${peer.id}`)
+    const isReconnect = state.reconnectAttempt > 0
     state.reconnectAttempt = 0
     sendToPeer(peer, { type: 'connection-status', status: 'connected', partnerName: state.partnerName })
     startHeartbeat(peer, state)
+    // On upstream reconnect, reload history to fill any gaps
+    if (isReconnect) {
+      console.log(`[ws/chat] upstream reconnected, reloading history for peer ${peer.id}`)
+      handleLoadHistory(peer, state, { limit: 50 })
+    }
   })
 
   upstream.on('message', (raw: WebSocket.RawData) => {
@@ -176,20 +184,24 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
   switch (msg.type) {
     case 'message': {
       const data = msg.data as Record<string, unknown> | undefined
-      if (!data) break
+      if (!data) { console.log('[ws/chat] message: no data'); break }
       const key = data.key as Record<string, unknown> | undefined
-      // Filter: only forward messages from the bound partner JID
       const remoteJid = key?.remoteJid as string | undefined
-      if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid) break
+      const fromMe = data.fromMe as boolean
+      console.log(`[ws/chat] message from=${remoteJid} fromMe=${fromMe} partnerJid=${state.partnerJid} text=${(data.text as string)?.slice(0, 30) ?? '[none]'} isMedia=${data.isMedia}`)
+      // Filter: only forward messages from the bound partner JID
+      if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid) {
+        console.log(`[ws/chat] FILTERED: JID mismatch ${remoteJid} !== ${state.partnerJid}`)
+        break
+      }
       const text = data.text as string | null | undefined
       const isMedia = data.isMedia as boolean | undefined
       const mediaType = (data.mediaType as string) ?? null
       const thumbnail = (data.thumbnail as string) ?? null
       // Skip messages with no text AND no media (protocol messages)
-      if (!text && !isMedia) break
+      if (!text && !isMedia) { console.log('[ws/chat] FILTERED: no text and no media'); break }
 
       const waMessageId = key?.id as string | undefined
-      const fromMe = data.fromMe as boolean
       const timestamp = data.timestamp as number | undefined
 
       // Persist to local DB so history stays fresh
@@ -216,7 +228,7 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
         id: waMessageId,
         sender: fromMe ? 'You' : state.partnerName,
         text: text ?? null,
-        timestamp,
+        timestamp: typeof timestamp === 'number' ? new Date(timestamp * 1000).toISOString() : timestamp,
         fromMe,
         waMessageId,
         isMedia: isMedia ?? false,
@@ -285,7 +297,11 @@ async function syncMessagesFromProd(
   mode: 'incremental' | 'full' = 'incremental',
 ) {
   const PROD_DB_URL = process.env.PROD_DATABASE_URL
-  if (!PROD_DB_URL) return
+  if (!PROD_DB_URL) {
+    console.log('[ws/chat] syncMessagesFromProd: no PROD_DATABASE_URL, skipping')
+    return
+  }
+  console.log(`[ws/chat] syncMessagesFromProd: starting ${mode} sync for couple ${state.coupleId.slice(0, 8)}`)
 
   type ProdPool = {
     query: (text: string, values?: unknown[]) => Promise<{ rows: any[] }>
@@ -390,10 +406,8 @@ async function syncMessagesFromProd(
       } catch { /* skip */ }
     }
 
+    console.log(`[ws/chat] syncMessagesFromProd: ${mode} done — ${inserted} new of ${rows.length} prod messages for couple ${state.coupleId.slice(0, 8)}`)
     if (inserted > 0) {
-      console.log(
-        `[ws/chat] synced ${inserted} ${mode} messages from prod for couple ${state.coupleId.slice(0, 8)}`,
-      )
       handleLoadHistory(peer, state, { limit: 50 })
     }
   } catch (err) {
@@ -460,6 +474,71 @@ async function handleLoadHistory(
   } catch (err) {
     console.error('[ws/chat] load-history error:', err)
     sendToPeer(peer, { type: 'error', message: 'Failed to load history' })
+  }
+}
+
+// ── DB poll fallback ────────────────────────────────────────────────
+
+async function pollDbForNewMessages(peer: WebSocketPeer, state: PeerState) {
+  if (state.closed) return
+  try {
+    // Get the latest message timestamp we've seen
+    const [latestRow] = await db
+      .select({ timestamp: messages.timestamp })
+      .from(messages)
+      .where(eq(messages.coupleId, state.coupleId))
+      .orderBy(desc(messages.timestamp))
+      .limit(1)
+
+    if (!latestRow) return
+
+    // Store last poll timestamp on state to only send truly new messages
+    const lastPollTs = (state as any)._lastPollTs as Date | undefined
+    if (lastPollTs && latestRow.timestamp.getTime() <= lastPollTs.getTime()) return
+
+    // Fetch messages newer than last poll (or last 5 if first poll)
+    const conditions = [eq(messages.coupleId, state.coupleId)]
+    if (lastPollTs) {
+      conditions.push(gt(messages.timestamp, lastPollTs))
+    }
+
+    const rows = await db
+      .select({
+        id: messages.id,
+        senderId: messages.senderId,
+        text: messages.text,
+        timestamp: messages.timestamp,
+        isMedia: messages.isMedia,
+        mediaType: messages.mediaType,
+        thumbnail: messages.thumbnail,
+        waMessageId: messages.waMessageId,
+      })
+      .from(messages)
+      .where(and(...conditions))
+      .orderBy(desc(messages.timestamp))
+      .limit(lastPollTs ? 20 : 0) // 0 = skip first poll (history already sent)
+
+    if (rows.length > 0 && lastPollTs) {
+      console.log(`[ws/chat] DB poll found ${rows.length} new messages for peer ${peer.id}`)
+      for (const m of rows.reverse()) {
+        sendToPeer(peer, {
+          type: 'message',
+          id: m.waMessageId ?? m.id,
+          sender: m.senderId === state.userId ? 'You' : state.partnerName,
+          text: m.text,
+          timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+          fromMe: m.senderId === state.userId,
+          waMessageId: m.waMessageId,
+          isMedia: m.isMedia ?? false,
+          mediaType: m.mediaType,
+          ...(m.thumbnail ? { thumbnail: m.thumbnail } : {}),
+        })
+      }
+    }
+
+    ;(state as any)._lastPollTs = latestRow.timestamp
+  } catch (err) {
+    console.error('[ws/chat] DB poll error:', err)
   }
 }
 
@@ -531,6 +610,7 @@ export default defineWebSocketHandler({
         partnerName,
         heartbeatTimer: null,
         pongTimer: null,
+        pollTimer: null,
         reconnectAttempt: 0,
         closed: false,
       }
@@ -543,8 +623,11 @@ export default defineWebSocketHandler({
       // ── Send initial history (server-initiated to avoid race) ──
       handleLoadHistory(peer, state, { limit: 50 })
 
-      // ── Sync from prod DB if local is empty ──
-      syncMessagesFromProd(peer, state, 'incremental')
+      // ── Sync from prod DB — full sync to catch any gaps ──
+      syncMessagesFromProd(peer, state, 'full')
+
+      // ── Start DB poll fallback (catches messages missed by WS chain) ──
+      state.pollTimer = setInterval(() => pollDbForNewMessages(peer, state), 5000)
     } catch (err) {
       console.error('[ws/chat] open error:', err)
       sendToPeer(peer, { type: 'error', message: 'Internal server error' })
@@ -583,19 +666,20 @@ export default defineWebSocketHandler({
           break
 
         case 'resync':
-          // Inject partnerJid from server state if client didn't provide one
-          if (!parsed.jid && state.partnerJid) {
-            parsed.jid = state.partnerJid
-          }
-          if (
-            state.upstream &&
-            state.upstream.readyState === WebSocket.OPEN &&
-            parsed.jid
-          ) {
-            state.upstream.send(JSON.stringify(parsed))
-          } else {
-            sendToPeer(peer, { type: 'resync-error', error: 'No partner JID or bridge not connected' })
-          }
+          // Pull ALL messages from prod DB (the actual source of truth)
+          // instead of relying on Baileys fetchMessageHistory which only goes backward
+          sendToPeer(peer, { type: 'resync-started' })
+          console.log(`[ws/chat] resync: starting full prod DB sync for peer ${peer.id}`)
+          syncMessagesFromProd(peer, state, 'full')
+            .then(() => {
+              console.log(`[ws/chat] resync: prod sync complete, reloading history`)
+              sendToPeer(peer, { type: 'resync-complete' })
+              handleLoadHistory(peer, state, { limit: 50 })
+            })
+            .catch((err) => {
+              console.error('[ws/chat] resync: prod sync failed:', err)
+              sendToPeer(peer, { type: 'resync-error', error: 'Sync failed' })
+            })
           break
 
         default:

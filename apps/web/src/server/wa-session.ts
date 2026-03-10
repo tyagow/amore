@@ -163,6 +163,7 @@ export const getWaSessionStatus = createServerFn({
     const [waSession] = await db
       .select({
         id: waSessions.id,
+        bridgeSessionId: waSessions.bridgeSessionId,
         status: waSessions.status,
         lastConnected: waSessions.lastConnected,
       })
@@ -173,6 +174,41 @@ export const getWaSessionStatus = createServerFn({
       ))
       .limit(1)
 
+    let resolvedWaSession = waSession ?? null
+
+    if (waSession) {
+      try {
+        const bridge = await getBridgeSession(waSession.bridgeSessionId)
+        const nextStatus = bridge.status as
+          | 'connected'
+          | 'connecting'
+          | 'disconnected'
+        if (nextStatus !== waSession.status) {
+          await db
+            .update(waSessions)
+            .set({
+              status: nextStatus,
+              ...(nextStatus === 'connected'
+                ? { lastConnected: new Date() }
+                : {}),
+            })
+            .where(eq(waSessions.id, waSession.id))
+        }
+
+        resolvedWaSession = {
+          id: waSession.id,
+          bridgeSessionId: waSession.bridgeSessionId,
+          status: nextStatus,
+          lastConnected:
+            nextStatus === 'connected'
+              ? waSession.lastConnected ?? new Date()
+              : waSession.lastConnected,
+        }
+      } catch {
+        // If the bridge is temporarily unavailable, fall back to the DB row.
+      }
+    }
+
     // Also fetch the couple's whatsappJid so the page knows if contact selection is needed
     let whatsappJid: string | null = null
     try {
@@ -182,7 +218,16 @@ export const getWaSessionStatus = createServerFn({
       // User may not be in a couple yet
     }
 
-    return { waSession: waSession ?? null, whatsappJid }
+    return {
+      waSession: resolvedWaSession
+        ? {
+            id: resolvedWaSession.id,
+            status: resolvedWaSession.status,
+            lastConnected: resolvedWaSession.lastConnected,
+          }
+        : null,
+      whatsappJid,
+    }
   })
 
 export const disconnectWaSession = createServerFn({

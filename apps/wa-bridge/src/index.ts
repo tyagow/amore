@@ -95,6 +95,8 @@ manager.on('connected', ({ sessionId, user }) => {
 })
 
 manager.on('message', ({ sessionId, messages }) => {
+  const clients = wsClients.get(sessionId)
+  log.info({ sessionId, count: messages.length, clientCount: clients?.size ?? 0 }, 'Broadcasting messages to WS clients')
   for (const msg of messages) {
     const content = msg.message ?? null
     broadcast(sessionId, {
@@ -426,16 +428,18 @@ wss.on('connection', async (ws, req) => {
         break
       }
       case 'resync': {
-        const jid = msg.jid
-        if (!jid || typeof jid !== 'string') {
-          ws.send(JSON.stringify({ type: 'resync-error', error: 'jid is required and must be a string' }))
-          return
+        const jid = msg.jid as string | undefined
+        if (!jid) {
+          ws.send(JSON.stringify({ type: 'resync-error', error: 'No JID provided for resync' }))
+          break
         }
         try {
-          await manager.resyncMessages(sessionId, jid)
           ws.send(JSON.stringify({ type: 'resync-started' }))
+          const requestId = await manager.resyncMessages(sessionId, jid)
+          log.info({ sessionId, jid, requestId }, 'Resync initiated via fetchMessageHistory')
         } catch (err) {
           const error = err instanceof Error ? err.message : 'Failed to start resync'
+          log.error({ err, sessionId, jid }, 'Resync failed')
           ws.send(JSON.stringify({ type: 'resync-error', error }))
         }
         break

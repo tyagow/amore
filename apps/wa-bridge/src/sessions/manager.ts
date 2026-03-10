@@ -66,6 +66,7 @@ export class SessionManager extends EventEmitter {
   private sessions = new Map<string, SessionInfo>()
   private reconnectTimers = new Map<string, NodeJS.Timeout>()
   private pendingResyncs = new Map<string, { sessionId: string; jid: string; coupleId: string; timer: NodeJS.Timeout }>()
+  private manualRestarts = new Set<string>()
   private pool: Pool
 
   constructor(pool: Pool) {
@@ -173,6 +174,12 @@ export class SessionManager extends EventEmitter {
       }
 
       if (connection === 'close') {
+        if (this.manualRestarts.delete(sessionId)) {
+          session.status = 'closed'
+          log.info({ sessionId }, 'Session closed for manual restart')
+          return
+        }
+
         session.status = 'closed'
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode
         const currentRetryCount = session.retryCount
@@ -579,6 +586,23 @@ export class SessionManager extends EventEmitter {
     this.pendingResyncs.set(requestId, { sessionId, jid, coupleId: binding.coupleId, timer })
     log.info({ sessionId, jid, coupleId: binding.coupleId, requestId }, 'Resync requested')
     return requestId
+  }
+
+  async restartSession(sessionId: string): Promise<void> {
+    const reconnectTimer = this.reconnectTimers.get(sessionId)
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      this.reconnectTimers.delete(sessionId)
+    }
+
+    const session = this.sessions.get(sessionId)
+    if (session) {
+      this.manualRestarts.add(sessionId)
+      session.status = 'closed'
+      session.socket.end(undefined)
+    }
+
+    await this.createSession(sessionId)
   }
 
   async deleteSession(sessionId: string): Promise<void> {
