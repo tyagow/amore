@@ -5,6 +5,7 @@ import {
   coachMessages,
   coachNudges,
   coachThreads,
+  messages,
 } from '@amore-couples/db/schema'
 import {
   and,
@@ -201,4 +202,34 @@ export const dismissNudge = createServerFn({ method: 'POST' })
       ))
 
     return { ok: true }
+  })
+
+export const getCoachStarter = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    const { couple, session, partnerId } = await requireCouple()
+
+    const recentMessages = await db.query.messages.findMany({
+      where: eq(messages.coupleId, couple.id),
+      orderBy: [desc(messages.timestamp)],
+      limit: 20,
+      columns: {
+        senderId: true,
+        text: true,
+      },
+    })
+
+    const formatted = recentMessages
+      .filter((m) => Boolean(m.text))
+      .reverse()
+      .map((m) => ({
+        sender: m.senderId === session.user.id ? 'You' : 'Partner',
+        text: m.text ?? '',
+      }))
+
+    if (formatted.length === 0) {
+      return null
+    }
+
+    const { generateCoachStarter } = await import('@amore-couples/ai')
+    return generateCoachStarter(formatted)
   })
