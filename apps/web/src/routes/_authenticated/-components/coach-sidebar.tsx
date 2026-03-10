@@ -434,8 +434,8 @@ export function CoachSidebar({
             )}
           </div>
 
-          <div className="border-t border-warm-200 bg-white/85 px-3 pb-3 pt-3 backdrop-blur">
-            <div className="flex items-end gap-2 rounded-[1.75rem] border border-warm-200 bg-white px-3 py-2 shadow-sm">
+          <div className="border-t border-warm-200/80 bg-white/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-sm">
+            <div className="flex items-end gap-1.5 rounded-2xl border border-warm-200/60 bg-white px-3 py-1.5 shadow-sm transition-colors focus-within:border-coral-300 focus-within:ring-1 focus-within:ring-coral-300/20">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -443,11 +443,11 @@ export function CoachSidebar({
                 onKeyDown={handleKeyDown}
                 placeholder="Ask your coach..."
                 rows={1}
-                className="max-h-28 min-h-6 flex-1 resize-none bg-transparent py-1 text-sm text-warm-800 outline-none placeholder:text-warm-400"
+                className="max-h-24 min-h-[2rem] flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-5 text-warm-800 outline-none placeholder:text-warm-400"
                 onInput={(event) => {
                   const target = event.target as HTMLTextAreaElement
                   target.style.height = 'auto'
-                  target.style.height = `${Math.min(target.scrollHeight, 112)}px`
+                  target.style.height = `${Math.min(target.scrollHeight, 96)}px`
                 }}
                 disabled={isLoading}
               />
@@ -455,10 +455,10 @@ export function CoachSidebar({
               {isStreaming ? (
                 <button
                   onClick={stopStreaming}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-warm-200 text-warm-700 transition-colors hover:bg-warm-300"
+                  className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-warm-100 text-warm-600 transition-colors hover:bg-warm-200"
                   aria-label="Stop coach response"
                 >
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
                   </svg>
                 </button>
@@ -466,11 +466,11 @@ export function CoachSidebar({
                 <button
                   onClick={() => void handleSend()}
                   disabled={!input.trim() || isLoading}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-coral-500 text-white transition-colors hover:bg-coral-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-coral-500 text-white transition-colors hover:bg-coral-600 disabled:cursor-not-allowed disabled:opacity-30"
                   aria-label="Send coach message"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-7-7 7 7-7 7" />
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12 14 0m-7-7 7 7-7 7" />
                   </svg>
                 </button>
               )}
