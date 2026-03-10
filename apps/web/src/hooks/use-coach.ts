@@ -3,6 +3,7 @@ import {
   deleteThread,
   dismissNudge,
   getCoachNudges,
+  getCoachStarter,
   getOrCreateThread,
   getThreadMessages,
   listThreads,
@@ -29,6 +30,11 @@ export interface CoachNudge {
   trigger: string
   message: string
   createdAt: string
+}
+
+export interface CoachStarter {
+  insight: string
+  suggestions: string[]
 }
 
 function toIsoString(value: unknown): string {
@@ -86,6 +92,8 @@ export function useCoach(currentPage?: string) {
   const [nudges, setNudges] = useState<CoachNudge[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [starter, setStarter] = useState<CoachStarter | null>(null)
+  const [starterLoading, setStarterLoading] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
   const activeThreadRef = useRef<CoachThread | null>(null)
@@ -102,6 +110,43 @@ export function useCoach(currentPage?: string) {
     setThreads(normalized)
     return normalized
   }, [])
+
+  const loadNudges = useCallback(async () => {
+    const result = await getCoachNudges() as Array<{
+      id: string
+      trigger: string
+      message: string
+      createdAt: Date | string
+    }>
+    const normalized = result.map(normalizeNudge)
+    setNudges(normalized)
+    return normalized
+  }, [])
+
+  const loadStarter = useCallback(async (threadMessages: CoachMessage[]) => {
+    if (currentPage !== 'chat') return
+
+    // New thread (no messages) or stale thread (last message > 1h ago)
+    const isNew = threadMessages.length === 0
+    const isStale = threadMessages.length > 0 &&
+      Date.now() - new Date(threadMessages[threadMessages.length - 1].createdAt).getTime() > 60 * 60 * 1000
+
+    if (!isNew && !isStale) {
+      setStarter(null)
+      return
+    }
+
+    setStarterLoading(true)
+    try {
+      const result = await getCoachStarter()
+      setStarter(result as CoachStarter | null)
+    } catch (err) {
+      console.error('[coach] failed to load starter', err)
+      setStarter(null)
+    } finally {
+      setStarterLoading(false)
+    }
+  }, [currentPage])
 
   const openThread = useCallback(async (threadId?: string) => {
     setIsLoading(true)
@@ -132,9 +177,11 @@ export function useCoach(currentPage?: string) {
         const normalized = result.map(normalizeMessage)
         setMessages(normalized)
         messageCountRef.current = normalized.length
+        void loadStarter(normalized)
       } else {
         setMessages([])
         messageCountRef.current = 0
+        void loadStarter([])
       }
 
       return thread
@@ -144,25 +191,13 @@ export function useCoach(currentPage?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [loadStarter])
 
   const newThread = useCallback(async () => {
     const thread = await openThread()
     await loadThreads()
     return thread
   }, [loadThreads, openThread])
-
-  const loadNudges = useCallback(async () => {
-    const result = await getCoachNudges() as Array<{
-      id: string
-      trigger: string
-      message: string
-      createdAt: Date | string
-    }>
-    const normalized = result.map(normalizeNudge)
-    setNudges(normalized)
-    return normalized
-  }, [])
 
   const persistExchange = useCallback(async ({
     threadId,
@@ -203,6 +238,7 @@ export function useCoach(currentPage?: string) {
     if (!trimmed) return
 
     setError(null)
+    setStarter(null)
 
     const userMessage: CoachMessage = {
       id: `temp-user-${Date.now()}`,
@@ -390,6 +426,8 @@ export function useCoach(currentPage?: string) {
     nudges,
     isLoading,
     error,
+    starter,
+    starterLoading,
     loadThreads,
     openThread,
     newThread,
