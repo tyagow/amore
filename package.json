@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@amore-couples/web",
+    "dev:local": "turbo run dev --filter=@amore-couples/web --filter=@amore-couples/wa-bridge",
     "dev:full": "turbo run dev",
     "dev:restart": "bash scripts/dev-restart.sh",
     "dev:sync": "pnpm -C apps/wa-bridge exec tsx --env-file=../../.env.local ../../scripts/sync-messages-from-prod.ts",
