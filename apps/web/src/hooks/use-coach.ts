@@ -124,7 +124,6 @@ export function useCoach(currentPage?: string) {
   }, [])
 
   const loadStarter = useCallback(async (threadMessages: CoachMessage[]) => {
-    if (currentPage !== 'chat') return
 
     // New thread (no messages) or stale thread (last message > 1h ago)
     const isNew = threadMessages.length === 0

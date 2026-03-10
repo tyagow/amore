@@ -7,6 +7,7 @@ import {
   coachNudges,
   coachThreads,
   messages,
+  users,
 } from '@amore-couples/db/schema'
 import {
   and,
@@ -207,23 +208,31 @@ export const dismissNudge = createServerFn({ method: 'POST' })
 
 export const getCoachStarter = createServerFn({ method: 'GET' })
   .handler(async () => {
-    const { couple, session } = await requireCouple()
+    const { couple, session, partnerId } = await requireCouple()
 
-    const recentMessages = await db.query.messages.findMany({
-      where: eq(messages.coupleId, couple.id),
-      orderBy: [desc(messages.timestamp)],
-      limit: 20,
-      columns: {
-        senderId: true,
-        text: true,
-      },
-    })
+    const [partner, recentMessages] = await Promise.all([
+      db.query.users.findFirst({
+        where: eq(users.id, partnerId),
+        columns: { name: true },
+      }),
+      db.query.messages.findMany({
+        where: eq(messages.coupleId, couple.id),
+        orderBy: [desc(messages.timestamp)],
+        limit: 20,
+        columns: {
+          senderId: true,
+          text: true,
+        },
+      }),
+    ])
+
+    const partnerName = partner?.name ?? 'your partner'
 
     const formatted = recentMessages
       .filter((m) => Boolean(m.text))
       .reverse()
       .map((m) => ({
-        sender: m.senderId === session.user.id ? 'You' : 'Partner',
+        sender: m.senderId === session.user.id ? 'You' : partnerName,
         text: m.text ?? '',
       }))
 
@@ -232,5 +241,5 @@ export const getCoachStarter = createServerFn({ method: 'GET' })
     }
 
     const { generateCoachStarter } = await import('@amore-couples/ai')
-    return generateCoachStarter(formatted)
+    return generateCoachStarter(formatted, partnerName)
   })

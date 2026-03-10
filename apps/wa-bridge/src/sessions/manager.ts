@@ -103,6 +103,10 @@ export class SessionManager extends EventEmitter {
             connectedUserId,
             partnerUserId,
           })
+          log.info({ sessionId, jid: row.whatsapp_jid, coupleId: row.couple_id, partnerUserId }, 'Restored JID binding from DB')
+        }
+        if (result.rows.length === 0) {
+          log.warn({ sessionId, connectedUserId }, 'No JID bindings found in DB — messages from partners will NOT be persisted')
         }
       } catch (err) {
         log.error({ err, sessionId }, 'Failed to restore JID bindings')
@@ -349,6 +353,7 @@ export class SessionManager extends EventEmitter {
     })
 
     sock.ev.on('messages.upsert', async ({ messages: msgs, type }) => {
+      log.info({ sessionId, count: msgs.length, type, jids: msgs.map(m => m.key.remoteJid).filter(Boolean) }, 'messages.upsert')
       if (type !== 'notify') return
 
       // Cache messages for getMessage retrieval (best-effort)
@@ -388,7 +393,10 @@ export class SessionManager extends EventEmitter {
           const jid = msg.key.remoteJid
           if (!jid) continue
           const binding = session.jidBindings.get(jid)
-          if (!binding) continue // skip messages from unbound contacts
+          if (!binding) {
+            log.debug({ sessionId, jid, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size, boundJids: [...session.jidBindings.keys()] }, 'Skipping message from unbound JID')
+            continue
+          }
 
           // Handle revocations
           const revoked = msg.message?.protocolMessage

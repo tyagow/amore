@@ -325,12 +325,15 @@ export interface CoachStarter {
 
 export async function generateCoachStarter(
   recentMessages: Array<{ sender: string; text: string }>,
+  partnerName?: string,
 ): Promise<CoachStarter> {
   const client = getClient()
 
   const formatted = recentMessages
     .map((m) => `[${m.sender}] ${m.text}`)
     .join('\n')
+
+  const name = partnerName ?? 'your partner'
 
   try {
     return await withRetry(async () => {
@@ -339,11 +342,13 @@ export async function generateCoachStarter(
         max_tokens: 250,
         system: `You are a relationship coach reviewing a couple's recent WhatsApp messages.
 
-Return a JSON object with:
-- "insight": A brief observation (1-2 sentences) about the conversation tone, topic, or dynamic. Be specific to what you see, not generic.
-- "suggestions": 3-4 short action prompts (5-10 words each) the user could tap to start a coaching conversation. Make them specific to the message content.
+The user's partner is named ${name}. Always refer to the partner by name — never use "them", "their", "they", or "partner".
 
-Examples of good suggestions: "Ask about her work stress", "Respond to the weekend plan", "Check in on how she's feeling", "Discuss the budget conversation"
+Return a JSON object with:
+- "insight": A brief observation (1-2 sentences) about the conversation tone, topic, or dynamic. Be specific to what you see, not generic. Use ${name}'s name.
+- "suggestions": 3-4 short action prompts (5-10 words each) the user could tap to start a coaching conversation. Make them specific to the message content. Use ${name}'s name.
+
+Examples of good suggestions: "Thank ${name} for the meal prep", "Ask ${name} about the weekend plan", "Check in on how ${name} is feeling", "Discuss the budget with ${name}"
 
 Return ONLY valid JSON, no markdown.`,
         messages: [
