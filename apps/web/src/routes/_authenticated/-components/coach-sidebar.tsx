@@ -156,6 +156,46 @@ function NudgeBanner({
   )
 }
 
+function StarterShimmer() {
+  return (
+    <div className="space-y-3 px-3 py-4">
+      <div className="rounded-3xl rounded-bl-md border border-warm-200 bg-white px-4 py-3 shadow-sm">
+        <div className="space-y-2">
+          <div className="h-3 w-4/5 animate-pulse rounded-full bg-warm-200" />
+          <div className="h-3 w-3/5 animate-pulse rounded-full bg-warm-200" />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <div className="h-8 w-32 animate-pulse rounded-full bg-warm-100" />
+        <div className="h-8 w-28 animate-pulse rounded-full bg-warm-100" />
+        <div className="h-8 w-36 animate-pulse rounded-full bg-warm-100" />
+      </div>
+    </div>
+  )
+}
+
+function SuggestionChips({
+  suggestions,
+  onSelect,
+}: {
+  suggestions: string[]
+  onSelect: (text: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 px-3">
+      {suggestions.map((suggestion) => (
+        <button
+          key={suggestion}
+          onClick={() => onSelect(suggestion)}
+          className="rounded-full border border-coral-200 bg-white px-3 py-1.5 text-xs font-medium text-coral-700 shadow-sm transition-colors hover:bg-coral-50 hover:border-coral-300 active:bg-coral-100"
+        >
+          {suggestion}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function CoachSidebar({
   currentPage,
   onClose,
@@ -171,6 +211,8 @@ export function CoachSidebar({
     isLoading,
     nudges,
     error,
+    starter,
+    starterLoading,
     loadThreads,
     openThread,
     newThread,
@@ -221,8 +263,8 @@ export function CoachSidebar({
     }
   }, [isLoading, showThreads])
 
-  const handleSend = async () => {
-    const text = input.trim()
+  const handleSend = async (chipText?: string) => {
+    const text = (chipText ?? input).trim()
     if (!text || isStreaming) return
 
     setInput('')
@@ -357,15 +399,29 @@ export function CoachSidebar({
                 <div className="h-7 w-7 animate-spin rounded-full border-2 border-coral-200 border-t-coral-500" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-warm-200 bg-white/75 px-6 py-12 text-center shadow-sm">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-coral-50 text-coral-600">
-                  <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
-                  </svg>
+              starterLoading ? (
+                <StarterShimmer />
+              ) : starter ? (
+                <div className="space-y-3">
+                  <CoachBubble role="assistant" content={starter.insight} />
+                  <SuggestionChips
+                    suggestions={starter.suggestions}
+                    onSelect={(text) => {
+                      void handleSend(text)
+                    }}
+                  />
                 </div>
-                <p className="mt-4 text-sm font-medium text-warm-800">Ask about tension, communication, goals, or what your recent patterns mean.</p>
-                <p className="mt-2 text-xs leading-5 text-warm-500">The coach uses your relationship history, recent insights, and prior coaching threads to answer directly.</p>
-              </div>
+              ) : (
+                <div className="rounded-[2rem] border border-dashed border-warm-200 bg-white/75 px-6 py-12 text-center shadow-sm">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-coral-50 text-coral-600">
+                    <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
+                    </svg>
+                  </div>
+                  <p className="mt-4 text-sm font-medium text-warm-800">Ask about tension, communication, goals, or what your recent patterns mean.</p>
+                  <p className="mt-2 text-xs leading-5 text-warm-500">The coach uses your relationship history, recent insights, and prior coaching threads to answer directly.</p>
+                </div>
+              )
             ) : (
               messages.map((message) => (
                 <CoachBubble

@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { db } from '@amore-couples/db'
 import {
+  coachMemory,
   coachMessages,
   coachNudges,
   coachThreads,
@@ -206,7 +207,7 @@ export const dismissNudge = createServerFn({ method: 'POST' })
 
 export const getCoachStarter = createServerFn({ method: 'GET' })
   .handler(async () => {
-    const { couple, session, partnerId } = await requireCouple()
+    const { couple, session } = await requireCouple()
 
     const recentMessages = await db.query.messages.findMany({
       where: eq(messages.coupleId, couple.id),
