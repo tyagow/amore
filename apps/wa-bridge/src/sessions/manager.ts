@@ -353,7 +353,9 @@ export class SessionManager extends EventEmitter {
     })
 
     sock.ev.on('messages.upsert', async ({ messages: msgs, type }) => {
-      log.info({ sessionId, count: msgs.length, type, jids: msgs.map(m => m.key.remoteJid).filter(Boolean) }, 'messages.upsert')
+      // Bypass pino redaction by embedding JIDs in the message string
+      const jidList = msgs.map(m => m.key.remoteJid).filter(Boolean).join(', ')
+      log.info({ sessionId, count: msgs.length, type }, `messages.upsert jids=[${jidList}]`)
       if (type !== 'notify') return
 
       // Cache messages for getMessage retrieval (best-effort)
@@ -394,7 +396,9 @@ export class SessionManager extends EventEmitter {
           if (!jid) continue
           const binding = session.jidBindings.get(jid)
           if (!binding) {
-            log.debug({ sessionId, jid, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size, boundJids: [...session.jidBindings.keys()] }, 'Skipping message from unbound JID')
+            // CRITICAL: log at info level so we can see what JIDs are being skipped
+            // Bypass pino redaction by using plain string interpolation
+            log.info({ sessionId, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size }, `Skipping message from unbound JID: ${jid} (bound: ${[...session.jidBindings.keys()].join(', ')})`)
             continue
           }
 
