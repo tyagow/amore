@@ -259,6 +259,20 @@ app.post('/sessions/:id/send', async (c) => {
   }
 })
 
+app.post('/sessions/:id/restart', async (c) => {
+  try {
+    const id = c.req.param('id')
+    await manager.restartSession(id)
+    return c.json({ status: 'restarting' })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('not found')) {
+      return c.json({ error: err.message }, 404)
+    }
+    log.error({ err }, 'POST /sessions/:id/restart failed')
+    return c.json({ error: 'Internal server error' }, 500)
+  }
+})
+
 app.delete('/sessions/:id', async (c) => {
   try {
     const id = c.req.param('id')
