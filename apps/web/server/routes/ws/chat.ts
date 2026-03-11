@@ -187,11 +187,13 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
       if (!data) { console.log('[ws/chat] message: no data'); break }
       const key = data.key as Record<string, unknown> | undefined
       const remoteJid = key?.remoteJid as string | undefined
+      const remoteJidAlt = key?.remoteJidAlt as string | undefined
       const fromMe = data.fromMe as boolean
-      console.log(`[ws/chat] message from=${remoteJid} fromMe=${fromMe} partnerJid=${state.partnerJid} text=${(data.text as string)?.slice(0, 30) ?? '[none]'} isMedia=${data.isMedia}`)
+      console.log(`[ws/chat] message from=${remoteJid} alt=${remoteJidAlt ?? 'none'} fromMe=${fromMe} partnerJid=${state.partnerJid} text=${(data.text as string)?.slice(0, 30) ?? '[none]'} isMedia=${data.isMedia}`)
       // Filter: only forward messages from the bound partner JID
-      if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid) {
-        console.log(`[ws/chat] FILTERED: JID mismatch ${remoteJid} !== ${state.partnerJid}`)
+      // Check both remoteJid and remoteJidAlt (handles LID ↔ phone number mapping)
+      if (state.partnerJid && remoteJid && remoteJid !== state.partnerJid && remoteJidAlt !== state.partnerJid) {
+        console.log(`[ws/chat] FILTERED: JID mismatch ${remoteJid} (alt=${remoteJidAlt}) !== ${state.partnerJid}`)
         break
       }
       const text = data.text as string | null | undefined
@@ -248,16 +250,20 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
 
     case 'sent-echo': {
       // Filter by JID — only forward echoes for the bound partner
+      // Check both jid and jidAlt for LID compatibility
       const echoJid = msg.jid as string | undefined
-      if (state.partnerJid && echoJid && echoJid !== state.partnerJid) break
+      const echoJidAlt = msg.jidAlt as string | undefined
+      if (state.partnerJid && echoJid && echoJid !== state.partnerJid && echoJidAlt !== state.partnerJid) break
       sendToPeer(peer, msg)
       break
     }
 
     case 'message-receipt': {
       // Filter by JID — only forward receipts for the bound partner
+      // Check both jid and jidAlt for LID compatibility
       const receiptJid = msg.jid as string | undefined
-      if (state.partnerJid && receiptJid && receiptJid !== state.partnerJid) break
+      const receiptJidAlt = msg.jidAlt as string | undefined
+      if (state.partnerJid && receiptJid && receiptJid !== state.partnerJid && receiptJidAlt !== state.partnerJid) break
       sendToPeer(peer, msg)
       break
     }

@@ -394,12 +394,17 @@ export class SessionManager extends EventEmitter {
         for (const msg of msgs) {
           const jid = msg.key.remoteJid
           if (!jid) continue
-          const binding = session.jidBindings.get(jid)
+          // Try primary JID first, then fall back to remoteJidAlt (handles LID ↔ phone number mapping)
+          const altJid = (msg.key as { remoteJidAlt?: string }).remoteJidAlt
+          const binding = session.jidBindings.get(jid) ?? (altJid ? session.jidBindings.get(altJid) : undefined)
           if (!binding) {
-            // CRITICAL: log at info level so we can see what JIDs are being skipped
-            // Bypass pino redaction by using plain string interpolation
-            log.info({ sessionId, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size }, `Skipping message from unbound JID: ${jid} (bound: ${[...session.jidBindings.keys()].join(', ')})`)
+            log.info({ sessionId, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size }, `Skipping message from unbound JID: ${jid} alt=${altJid ?? 'none'} (bound: ${[...session.jidBindings.keys()].join(', ')})`)
             continue
+          }
+          // If we matched via altJid, also store the primary JID for future lookups
+          if (!session.jidBindings.has(jid) && altJid) {
+            session.jidBindings.set(jid, binding)
+            log.info({ sessionId }, `Learned new JID mapping: ${jid} -> couple ${binding.coupleId} (via alt ${altJid})`)
           }
 
           // Handle revocations
