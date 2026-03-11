@@ -267,14 +267,19 @@ export class SessionManager extends EventEmitter {
         let totalBuffered = 0
         for (const buckets of session.historyMessages.values()) totalBuffered += buckets.length
 
-        // Group messages by JID
+        // Group messages by JID — resolve LID → phone JID via remoteJidAlt
         const byJid = new Map<string, proto.IWebMessageInfo[]>()
         for (const msg of historyMsgs) {
           const jid = msg.key?.remoteJid
           if (!jid || !isPersonalJid(jid)) continue
           if (!msg.message || !msg.key?.id) continue
-          if (!byJid.has(jid)) byJid.set(jid, [])
-          byJid.get(jid)!.push(msg)
+          // Use the JID that has a binding (handles LID ↔ phone mapping)
+          const altJid = (msg.key as { remoteJidAlt?: string }).remoteJidAlt
+          const resolvedJid = session.jidBindings.has(jid) ? jid
+            : (altJid && session.jidBindings.has(altJid)) ? altJid
+            : jid
+          if (!byJid.has(resolvedJid)) byJid.set(resolvedJid, [])
+          byJid.get(resolvedJid)!.push(msg)
         }
 
         for (const [jid, msgs] of byJid) {
