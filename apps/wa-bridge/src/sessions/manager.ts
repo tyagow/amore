@@ -108,6 +108,30 @@ export class SessionManager extends EventEmitter {
         if (result.rows.length === 0) {
           log.warn({ sessionId, connectedUserId }, 'No JID bindings found in DB — messages from partners will NOT be persisted')
         }
+
+        // Also create LID bindings by looking up LID mappings in wa_auth_keys
+        // This ensures messages arriving with LID JIDs (e.g. 138392553713815@lid)
+        // can be matched to bindings without depending on remoteJidAlt
+        for (const [phoneJid, binding] of restoredBindings) {
+          try {
+            // Extract phone number from JID (e.g. "554891848289" from "554891848289@s.whatsapp.net")
+            const phoneNumber = phoneJid.split('@')[0]
+            const lidResult = await this.pool.query(
+              `SELECT value FROM wa_auth_keys WHERE session_id = $1 AND type = 'lid-mapping' AND id = $2`,
+              [sessionId, phoneNumber]
+            )
+            if (lidResult.rows.length > 0) {
+              const lidNumber = lidResult.rows[0].value
+              // value is stored as JSON string, e.g. "138392553713815"
+              const lidClean = typeof lidNumber === 'string' ? lidNumber.replace(/"/g, '') : String(lidNumber)
+              const lidJid = `${lidClean}@lid`
+              restoredBindings.set(lidJid, binding)
+              log.info({ sessionId, phoneJid, lidJid, coupleId: binding.coupleId }, 'Also bound LID JID from mapping')
+            }
+          } catch (err) {
+            log.warn({ err, sessionId, phoneJid }, 'Failed to look up LID mapping for phone JID')
+          }
+        }
       } catch (err) {
         log.error({ err, sessionId }, 'Failed to restore JID bindings')
       }
@@ -399,9 +423,35 @@ export class SessionManager extends EventEmitter {
         for (const msg of msgs) {
           const jid = msg.key.remoteJid
           if (!jid) continue
-          // Try primary JID first, then fall back to remoteJidAlt (handles LID ↔ phone number mapping)
+          // Try primary JID first, then fall back to remoteJidAlt, then resolve LID via DB
           const altJid = (msg.key as { remoteJidAlt?: string }).remoteJidAlt
-          const binding = session.jidBindings.get(jid) ?? (altJid ? session.jidBindings.get(altJid) : undefined)
+          let binding = session.jidBindings.get(jid) ?? (altJid ? session.jidBindings.get(altJid) : undefined)
+
+          // If still no binding and JID is a LID, resolve via wa_auth_keys lid-mapping
+          if (!binding && jid.endsWith('@lid')) {
+            try {
+              const lidNumber = jid.split('@')[0]
+              const lidResult = await this.pool.query(
+                `SELECT value FROM wa_auth_keys WHERE session_id = $1 AND type = 'lid-mapping' AND id = $2`,
+                [sessionId, `${lidNumber}_reverse`]
+              )
+              if (lidResult.rows.length > 0) {
+                const phoneNumber = typeof lidResult.rows[0].value === 'string'
+                  ? lidResult.rows[0].value.replace(/"/g, '')
+                  : String(lidResult.rows[0].value)
+                const phoneJid = `${phoneNumber}@s.whatsapp.net`
+                binding = session.jidBindings.get(phoneJid)
+                if (binding) {
+                  // Cache the LID binding for future lookups
+                  session.jidBindings.set(jid, binding)
+                  log.info({ sessionId }, `Resolved LID via DB mapping: ${jid} -> ${phoneJid} -> couple ${binding.coupleId}`)
+                }
+              }
+            } catch (err) {
+              log.warn({ err, sessionId }, `Failed to resolve LID mapping for ${jid}`)
+            }
+          }
+
           if (!binding) {
             log.info({ sessionId, fromMe: msg.key.fromMe, bindingCount: session.jidBindings.size }, `Skipping message from unbound JID: ${jid} alt=${altJid ?? 'none'} (bound: ${[...session.jidBindings.keys()].join(', ')})`)
             continue
