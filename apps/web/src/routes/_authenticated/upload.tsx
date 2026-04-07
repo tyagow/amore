@@ -62,7 +62,7 @@ function UploadPage() {
     if (file.name.endsWith('.zip')) {
       // Try to extract .txt from zip
       try {
-        const { decompressSync, unzipSync } = await import('fflate')
+        const { unzipSync } = await import('fflate')
         const buffer = await file.arrayBuffer()
         const unzipped = unzipSync(new Uint8Array(buffer))
 

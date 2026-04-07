@@ -53,18 +53,12 @@ export const updateNotificationPreferences = createServerFn({ method: 'POST' })
     const session = await requireAuth()
 
     // Build the update object with only provided fields
-    const updates: Record<string, unknown> = { updatedAt: new Date() }
-    if (data.moodAlerts !== undefined) updates.moodAlerts = data.moodAlerts
-    if (data.coachNudges !== undefined) updates.coachNudges = data.coachNudges
-    if (data.scoreDrops !== undefined) updates.scoreDrops = data.scoreDrops
-    if (data.milestones !== undefined) updates.milestones = data.milestones
-    if (data.goalUpdates !== undefined) updates.goalUpdates = data.goalUpdates
-    if (data.weeklyDigest !== undefined) updates.weeklyDigest = data.weeklyDigest
-    if (data.pushEnabled !== undefined) updates.pushEnabled = data.pushEnabled
-    if (data.emailEnabled !== undefined) updates.emailEnabled = data.emailEnabled
-    if (data.quietStart !== undefined) updates.quietStart = data.quietStart
-    if (data.quietEnd !== undefined) updates.quietEnd = data.quietEnd
-    if (data.timezone !== undefined) updates.timezone = data.timezone
+    const updates: Record<string, unknown> = {
+      ...Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined),
+      ),
+      updatedAt: new Date(),
+    }
 
     // Upsert: update if exists, insert defaults if not
     const [updated] = await db

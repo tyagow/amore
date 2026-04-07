@@ -1,6 +1,6 @@
 import { db } from '@amore-couples/db'
 import { users, featureUsage, couples } from '@amore-couples/db/schema'
-import { eq, and, gte, sql } from 'drizzle-orm'
+import { eq, and, gte, sql, or } from 'drizzle-orm'
 
 // ── Plan Limits ─────────────────────────────────────────
 
@@ -52,26 +52,21 @@ export const GATED_TABS = [
  * plan='premium', both get premium access.
  */
 export async function getUserPlan(coupleId: string): Promise<Plan> {
+  // 2 queries → 1: fetch couple then check both users' plans in a single query
   const couple = await db.query.couples.findFirst({
     where: eq(couples.id, coupleId),
+    columns: { userAId: true, userBId: true },
   })
   if (!couple) return 'free'
 
-  const [userA, userB] = await Promise.all([
-    db.query.users.findFirst({
-      where: eq(users.id, couple.userAId),
-      columns: { plan: true },
-    }),
-    db.query.users.findFirst({
-      where: eq(users.id, couple.userBId),
-      columns: { plan: true },
-    }),
-  ])
-
-  if (userA?.plan === 'premium' || userB?.plan === 'premium') {
-    return 'premium'
-  }
-  return 'free'
+  const premiumUser = await db.query.users.findFirst({
+    where: and(
+      or(eq(users.id, couple.userAId), eq(users.id, couple.userBId)),
+      eq(users.plan, 'premium'),
+    ),
+    columns: { id: true },
+  })
+  return premiumUser ? 'premium' : 'free'
 }
 
 /**

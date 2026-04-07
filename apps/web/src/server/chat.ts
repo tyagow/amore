@@ -38,7 +38,8 @@ export const getChatAISuggestions = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { couple, partnerId, plan } = await requireCouple()
+    const { couple, partnerId, getPlan } = await requireCouple()
+    const plan = await getPlan()
 
     // Gate: reply suggestions are premium-only
     if (!PLAN_LIMITS[plan].replySuggestions) {
@@ -78,7 +79,8 @@ export const getChatAIMood = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { couple, partnerId, plan } = await requireCouple()
+    const { couple, partnerId, getPlan } = await requireCouple()
+    const plan = await getPlan()
 
     // Gate: live mood analysis is premium-only
     if (!PLAN_LIMITS[plan].liveMoodAnalysis) {
@@ -132,7 +134,8 @@ export const getChatAIReview = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { session, couple, partnerId, plan } = await requireCouple()
+    const { session, couple, partnerId, getPlan } = await requireCouple()
+    const plan = await getPlan()
 
     // Gate: tone review has daily limit for free users
     if (plan === 'free') {

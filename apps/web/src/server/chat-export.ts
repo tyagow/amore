@@ -102,8 +102,6 @@ export const uploadChatExport = createServerFn({ method: 'POST' })
     // For DB storage: all messages use the uploading user's ID as senderId
     // (FK constraint requires a real user ID). We prefix partner messages with
     // the partner's name in the text for the analysis pipeline to differentiate.
-    const partnerSenderName = parsed.senders.find((s) => s !== data.userSenderName) ?? parsed.senders[1]
-
     const messageRows = parsed.messages
       .filter((m) => m.text || m.isMedia)  // Skip empty
       .map((m) => ({

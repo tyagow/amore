@@ -192,7 +192,8 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
  */
 export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
   async () => {
-    const { session, couple, plan } = await requireCouple()
+    const { session, couple, getPlan } = await requireCouple()
+    const plan = await getPlan()
 
     // Gate: manual analysis has weekly limit for free users
     if (plan === 'free') {

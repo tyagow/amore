@@ -34,28 +34,26 @@ export const getDailyCheckin = createServerFn({ method: 'GET' })
     const today = todayUTC()
     const question = getDailyQuestion(today)
 
-    // Fetch user's check-in for today
-    const checkin = await db.query.dailyCheckins.findFirst({
-      where: and(
-        eq(dailyCheckins.coupleId, couple.id),
-        eq(dailyCheckins.userId, session.user.id),
-        eq(dailyCheckins.date, today),
-      ),
-    })
-
-    // Fetch partner's check-in for today (just completion status)
-    const partnerCheckin = await db.query.dailyCheckins.findFirst({
-      where: and(
-        eq(dailyCheckins.coupleId, couple.id),
-        eq(dailyCheckins.userId, partnerId),
-        eq(dailyCheckins.date, today),
-      ),
-    })
-
-    // Fetch streak info
-    const streak = await db.query.engagementStreaks.findFirst({
-      where: eq(engagementStreaks.userId, session.user.id),
-    })
+    // Fetch user's check-in, partner's check-in, and streak in parallel
+    const [checkin, partnerCheckin, streak] = await Promise.all([
+      db.query.dailyCheckins.findFirst({
+        where: and(
+          eq(dailyCheckins.coupleId, couple.id),
+          eq(dailyCheckins.userId, session.user.id),
+          eq(dailyCheckins.date, today),
+        ),
+      }),
+      db.query.dailyCheckins.findFirst({
+        where: and(
+          eq(dailyCheckins.coupleId, couple.id),
+          eq(dailyCheckins.userId, partnerId),
+          eq(dailyCheckins.date, today),
+        ),
+      }),
+      db.query.engagementStreaks.findFirst({
+        where: eq(engagementStreaks.userId, session.user.id),
+      }),
+    ])
 
     return {
       checkin: checkin ?? null,

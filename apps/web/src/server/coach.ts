@@ -27,6 +27,24 @@ const threadInputSchema = z.object({
   threadId: z.string().min(1).optional(),
 })
 
+/** Shared thread ownership check — verifies the thread belongs to the user's couple or to the user directly. */
+async function findOwnedThread(threadId: string, userId: string, coupleId: string | null) {
+  return db.query.coachThreads.findFirst({
+    where: coupleId
+      ? and(
+          eq(coachThreads.id, threadId),
+          or(
+            eq(coachThreads.coupleId, coupleId),
+            and(eq(coachThreads.userId, userId), isNull(coachThreads.coupleId)),
+          ),
+        )
+      : and(
+          eq(coachThreads.id, threadId),
+          eq(coachThreads.userId, userId),
+        ),
+  })
+}
+
 const contextSnapshotSchema = z.record(z.string(), z.unknown())
 
 export const getOrCreateThread = createServerFn({ method: 'POST' })
@@ -35,24 +53,7 @@ export const getOrCreateThread = createServerFn({ method: 'POST' })
     const { session, couple } = await optionalCouple()
 
     if (data.threadId) {
-      // Look up thread by id — check couple or user ownership
-      const existing = couple
-        ? await db.query.coachThreads.findFirst({
-            where: and(
-              eq(coachThreads.id, data.threadId),
-              or(
-                eq(coachThreads.coupleId, couple.id),
-                and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
-              ),
-            ),
-          })
-        : await db.query.coachThreads.findFirst({
-            where: and(
-              eq(coachThreads.id, data.threadId),
-              eq(coachThreads.userId, session.user.id),
-            ),
-          })
-
+      const existing = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
       if (!existing) {
         throw new Error('Thread not found')
       }
@@ -101,23 +102,7 @@ export const getThreadMessages = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const { session, couple } = await optionalCouple()
 
-    const thread = couple
-      ? await db.query.coachThreads.findFirst({
-          where: and(
-            eq(coachThreads.id, data.threadId),
-            or(
-              eq(coachThreads.coupleId, couple.id),
-              and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
-            ),
-          ),
-        })
-      : await db.query.coachThreads.findFirst({
-          where: and(
-            eq(coachThreads.id, data.threadId),
-            eq(coachThreads.userId, session.user.id),
-          ),
-        })
-
+    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
     if (!thread) {
       throw new Error('Thread not found')
     }
@@ -140,19 +125,9 @@ export const deleteThread = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { session, couple } = await optionalCouple()
 
-    if (couple) {
-      await db.delete(coachThreads).where(and(
-        eq(coachThreads.id, data.threadId),
-        or(
-          eq(coachThreads.coupleId, couple.id),
-          and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
-        ),
-      ))
-    } else {
-      await db.delete(coachThreads).where(and(
-        eq(coachThreads.id, data.threadId),
-        eq(coachThreads.userId, session.user.id),
-      ))
+    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
+    if (thread) {
+      await db.delete(coachThreads).where(eq(coachThreads.id, data.threadId))
     }
 
     return { ok: true }
@@ -170,23 +145,7 @@ export const saveCoachExchange = createServerFn({ method: 'POST' })
     const { session, couple } = await optionalCouple()
 
     // Verify thread ownership
-    const thread = couple
-      ? await db.query.coachThreads.findFirst({
-          where: and(
-            eq(coachThreads.id, data.threadId),
-            or(
-              eq(coachThreads.coupleId, couple.id),
-              and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
-            ),
-          ),
-        })
-      : await db.query.coachThreads.findFirst({
-          where: and(
-            eq(coachThreads.id, data.threadId),
-            eq(coachThreads.userId, session.user.id),
-          ),
-        })
-
+    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
     if (!thread) {
       throw new Error('Thread not found')
     }

@@ -50,7 +50,8 @@ function isInQuietHours(prefs: {
 
   try {
     const now = new Date()
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    // Use en-GB for deterministic HH:MM format (en-US may prefix with "24:" for midnight)
+    const formatter = new Intl.DateTimeFormat('en-GB', {
       timeZone: prefs.timezone,
       hour: '2-digit',
       minute: '2-digit',

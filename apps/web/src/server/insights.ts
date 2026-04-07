@@ -20,7 +20,8 @@ import { GATED_TABS } from './plan'
  */
 export const getInsightsData = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const { session, couple, partnerId, plan } = await requireCouple()
+    const { session, couple, partnerId, getPlan } = await requireCouple()
+    const plan = await getPlan()
     const userId = session.user.id
     const coupleId = couple.id
 

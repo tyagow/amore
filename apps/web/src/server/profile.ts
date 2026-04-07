@@ -216,7 +216,8 @@ export const updateProfile = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { session, couple, plan } = await requireCouple()
+    const { session, couple, getPlan } = await requireCouple()
+    const plan = await getPlan()
 
     // Gate: profile editing is premium-only
     if (!PLAN_LIMITS[plan].profileEditing) {
