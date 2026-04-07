@@ -26,7 +26,7 @@ export function Nav({
   return (
     <>
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-warm-50/80 backdrop-blur-lg border-t border-warm-200 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-warm-50/80 backdrop-blur-lg border-t border-warm-200 md:hidden pb-safe">
         <div className="flex items-center justify-around px-2 py-2">
           <NavItem to="/dashboard" label="Home" moodDot={partnerMoodColor}>
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -184,7 +184,7 @@ function NavItem({
   return (
     <Link
       to={to}
-      className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-warm-400 transition-colors"
+      className="relative flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-lg text-warm-400 transition-colors"
       activeProps={{ className: 'text-coral-500 border-t-2 border-coral-500 -mt-[2px]' }}
     >
       <span className="relative">
@@ -217,7 +217,7 @@ function NavButtonItem({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
+      className={`relative flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-lg transition-colors ${
         active
           ? 'text-coral-500 border-t-2 border-coral-500 -mt-[2px]'
           : 'text-warm-400'

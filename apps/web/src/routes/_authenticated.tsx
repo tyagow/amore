@@ -103,7 +103,7 @@ function AuthenticatedLayout() {
       />
 
       {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
-      <div className={`md:ml-64 pb-20 md:pb-0 transition-[margin] duration-300 ${coachOpen ? 'lg:mr-[22rem]' : ''}`}>
+      <div className={`md:ml-64 pb-24 md:pb-0 transition-[margin] duration-300 ${coachOpen ? 'lg:mr-[22rem]' : ''}`}>
         <Outlet />
       </div>
 
@@ -128,7 +128,7 @@ function AuthenticatedLayout() {
       {hasCouple && !coachOpen && (
         <button
           onClick={() => setCoachOpen(true)}
-          className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-coral-500 text-white shadow-lg transition-all hover:bg-coral-600 active:scale-95 lg:hidden"
+          className="fixed bottom-28 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-coral-500 text-white shadow-lg transition-all hover:bg-coral-600 active:scale-95 lg:hidden"
           aria-label="Open coach"
         >
           <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
