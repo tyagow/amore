@@ -13,3 +13,4 @@ export {
 } from './orchestrate'
 export { generateReplySuggestions, analyzeLiveMood, reviewMessageTone, type ChatMessage } from './chat'
 export { detectMoodShift, type MoodDetectionResult } from './mood-detect'
+export { parseWhatsAppExport, type ParsedMessage, type ParseResult } from './parse-export'

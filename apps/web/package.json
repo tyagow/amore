@@ -18,6 +18,7 @@
     "@types/qrcode": "^1.5.6",
     "better-auth": "1.5.1",
     "drizzle-orm": "^0.45.1",
+    "fflate": "^0.8.2",
     "h3": "2.0.1-rc.14",
     "jose": "^6.2.1",
     "nitro": "npm:nitro-nightly@3.0.1-20260227-181935-bfbb207c",
