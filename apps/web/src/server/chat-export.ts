@@ -99,35 +99,37 @@ export const uploadChatExport = createServerFn({ method: 'POST' })
     }).returning()
 
     // Map parsed messages to the Message format and persist
+    // For DB storage: all messages use the uploading user's ID as senderId
+    // (FK constraint requires a real user ID). We prefix partner messages with
+    // the partner's name in the text for the analysis pipeline to differentiate.
     const partnerSenderName = parsed.senders.find((s) => s !== data.userSenderName) ?? parsed.senders[1]
-
-    // Use a synthetic partner ID for export messages
-    const syntheticPartnerId = `export-partner-${couple.id}`
 
     const messageRows = parsed.messages
       .filter((m) => m.text || m.isMedia)  // Skip empty
       .map((m) => ({
         coupleId: couple.id,
-        senderId: m.sender === data.userSenderName ? userId : syntheticPartnerId,
+        senderId: userId,  // All messages use the real userId for FK
         text: m.text || null,
         timestamp: m.timestamp,
         isMedia: m.isMedia,
         source: 'export' as const,
+        originalSender: m.sender,  // Track original sender for analysis
       }))
 
-    // Insert messages in batches
+    // Insert messages in batches (without the originalSender field)
     const BATCH_SIZE = 500
     for (let i = 0; i < messageRows.length; i += BATCH_SIZE) {
-      const batch = messageRows.slice(i, i + BATCH_SIZE)
+      const batch = messageRows.slice(i, i + BATCH_SIZE).map(({ originalSender, ...row }) => row)
       await db.insert(messages).values(batch)
     }
 
-    // Build Message[] for the analysis pipeline
+    // Build Message[] for the analysis pipeline using original sender names
+    // as senderIds so the AI can differentiate between the two people
     const analysisMessages: Message[] = messageRows.map((m, idx) => ({
       id: `export-${idx}`,
       coupleId: couple.id,
       waMessageId: null,
-      senderId: m.senderId,
+      senderId: m.originalSender,  // Use original sender name for analysis
       text: m.text,
       timestamp: m.timestamp,
       sentiment: null,
