@@ -1,3 +1,6 @@
+# Local Postgres and Redis are optional for development.
+# By default, DATABASE_URL in .env.local points to Railway Postgres.
+# Only start these if you need a fully offline dev environment.
 services:
   postgres:
     image: postgres:17-alpine

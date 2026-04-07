@@ -206,25 +206,6 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
       const waMessageId = key?.id as string | undefined
       const timestamp = data.timestamp as number | undefined
 
-      // Persist to local DB so history stays fresh
-      if (waMessageId && timestamp) {
-        const senderId = fromMe ? state.userId : state.partnerId
-        db.insert(messages)
-          .values({
-            coupleId: state.coupleId,
-            waMessageId,
-            senderId,
-            text: text ?? null,
-            timestamp: new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp),
-            isMedia: isMedia ?? false,
-            mediaType,
-            thumbnail: thumbnail ?? null,
-            source: 'baileys',
-          })
-          .onConflictDoNothing()
-          .catch(() => { /* best-effort local persistence */ })
-      }
-
       sendToPeer(peer, {
         type: 'message',
         id: waMessageId,
@@ -270,14 +251,12 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
 
     case 'messages-persisted':
       sendToPeer(peer, msg)
-      // Bridge just persisted messages to prod DB — pull them into local DB
-      syncMessagesFromProd(peer, state, 'incremental')
+      handleLoadHistory(peer, state, { limit: 50 })
       break
 
     case 'resync-complete':
       sendToPeer(peer, msg)
-      // Resync can backfill older gaps, so run a full pull before reloading history.
-      syncMessagesFromProd(peer, state, 'full')
+      handleLoadHistory(peer, state, { limit: 50 })
       break
 
     case 'analysis-complete':
@@ -292,136 +271,6 @@ function routeBridgeMessage(peer: WebSocketPeer, state: PeerState, msg: Record<s
       // Forward unknown types as-is
       sendToPeer(peer, msg)
       break
-  }
-}
-
-// ── Sync messages from prod DB into local DB ───────────────────────
-
-async function syncMessagesFromProd(
-  peer: WebSocketPeer,
-  state: PeerState,
-  mode: 'incremental' | 'full' = 'incremental',
-) {
-  const PROD_DB_URL = process.env.PROD_DATABASE_URL
-  if (!PROD_DB_URL) {
-    console.log('[ws/chat] syncMessagesFromProd: no PROD_DATABASE_URL, skipping')
-    return
-  }
-  console.log(`[ws/chat] syncMessagesFromProd: starting ${mode} sync for couple ${state.coupleId.slice(0, 8)}`)
-
-  type ProdPool = {
-    query: (text: string, values?: unknown[]) => Promise<{ rows: any[] }>
-    end: () => Promise<void>
-  }
-
-  let pool: ProdPool | null = null
-  try {
-    // @ts-expect-error `pg` does not expose usable ESM typings in this package.
-    const pg = await import('pg')
-    const prodPool = new (pg.default as any).Pool({
-      connectionString: PROD_DB_URL,
-      max: 2,
-    }) as ProdPool
-    pool = prodPool
-
-    const [localLatestMessage] = await db
-      .select({ timestamp: messages.timestamp })
-      .from(messages)
-      .where(eq(messages.coupleId, state.coupleId))
-      .orderBy(desc(messages.timestamp))
-      .limit(1)
-
-    // Find the prod couple that contains the same user (by matching session user's email)
-    const localUser = await db.query.users.findFirst({
-      where: eq(users.id, state.userId),
-      columns: { email: true },
-    })
-    if (!localUser) return
-
-    // Look up the user in prod by email, then find their couple
-    const { rows: prodUsers } = await prodPool.query(
-      'SELECT id FROM users WHERE email = $1 LIMIT 1',
-      [localUser.email],
-    )
-    if (prodUsers.length === 0) return
-
-    const prodUserId = prodUsers[0].id
-    const { rows: prodCouples } = await prodPool.query(
-      'SELECT id FROM couples WHERE (user_a_id = $1 OR user_b_id = $1) AND status = $2 LIMIT 1',
-      [prodUserId, 'active'],
-    )
-    if (prodCouples.length === 0) return
-
-    const prodCoupleId = prodCouples[0].id
-
-    const prodMessagesQuery =
-      mode === 'full' || !localLatestMessage
-        ? {
-            text: 'SELECT * FROM messages WHERE couple_id = $1 ORDER BY timestamp ASC',
-            values: [prodCoupleId],
-          }
-        : {
-            // Re-fetch the last known second so same-timestamp messages are not missed.
-            text: 'SELECT * FROM messages WHERE couple_id = $1 AND timestamp >= $2 ORDER BY timestamp ASC',
-            values: [prodCoupleId, localLatestMessage.timestamp],
-          }
-    const { rows } = await prodPool.query(
-      prodMessagesQuery.text,
-      prodMessagesQuery.values,
-    )
-
-    // Build a sender mapping: prod user IDs → local user IDs
-    const { rows: prodCoupleUsers } = await prodPool.query(
-      'SELECT id, email FROM users WHERE id IN (SELECT user_a_id FROM couples WHERE id = $1 UNION SELECT user_b_id FROM couples WHERE id = $1)',
-      [prodCoupleId],
-    )
-    const localPartner = await db.query.users.findFirst({
-      where: eq(users.id, state.partnerId),
-      columns: { id: true, email: true },
-    })
-
-    const senderMap = new Map<string, string>()
-    for (const pu of prodCoupleUsers) {
-      if (pu.email === localUser.email) {
-        senderMap.set(pu.id, state.userId)
-      } else if (localPartner && pu.email === localPartner.email) {
-        senderMap.set(pu.id, state.partnerId)
-      }
-    }
-
-    let inserted = 0
-    for (const m of rows) {
-      const localSenderId = senderMap.get(m.sender_id)
-      if (!localSenderId) continue
-      try {
-        const result = await db.insert(messages)
-          .values({
-            coupleId: state.coupleId,
-            waMessageId: m.wa_message_id,
-            senderId: localSenderId,
-            text: m.text,
-            timestamp: m.timestamp,
-            sentiment: m.sentiment,
-            isMedia: m.is_media,
-            mediaType: m.media_type,
-            thumbnail: m.thumbnail,
-            source: m.source,
-          })
-          .onConflictDoNothing()
-        inserted += result.rowCount ?? 0
-      } catch { /* skip */ }
-    }
-
-    console.log(`[ws/chat] syncMessagesFromProd: ${mode} done — ${inserted} new of ${rows.length} prod messages for couple ${state.coupleId.slice(0, 8)}`)
-    if (inserted > 0) {
-      handleLoadHistory(peer, state, { limit: 50 })
-    }
-  } catch (err) {
-    console.error('[ws/chat] prod sync failed:', err)
-  } finally {
-    if (pool) {
-      await pool.end().catch(() => {})
-    }
   }
 }
 
@@ -629,9 +478,6 @@ export default defineWebSocketHandler({
       // ── Send initial history (server-initiated to avoid race) ──
       handleLoadHistory(peer, state, { limit: 50 })
 
-      // ── Sync from prod DB — full sync to catch any gaps ──
-      syncMessagesFromProd(peer, state, 'full')
-
       // ── Start DB poll fallback (catches messages missed by WS chain) ──
       state.pollTimer = setInterval(() => pollDbForNewMessages(peer, state), 5000)
     } catch (err) {
@@ -672,20 +518,13 @@ export default defineWebSocketHandler({
           break
 
         case 'resync':
-          // Pull ALL messages from prod DB (the actual source of truth)
-          // instead of relying on Baileys fetchMessageHistory which only goes backward
-          sendToPeer(peer, { type: 'resync-started' })
-          console.log(`[ws/chat] resync: starting full prod DB sync for peer ${peer.id}`)
-          syncMessagesFromProd(peer, state, 'full')
-            .then(() => {
-              console.log(`[ws/chat] resync: prod sync complete, reloading history`)
-              sendToPeer(peer, { type: 'resync-complete' })
-              handleLoadHistory(peer, state, { limit: 50 })
-            })
-            .catch((err) => {
-              console.error('[ws/chat] resync: prod sync failed:', err)
-              sendToPeer(peer, { type: 'resync-error', error: 'Sync failed' })
-            })
+          // Forward resync request to upstream wa-bridge
+          if (
+            state.upstream &&
+            state.upstream.readyState === WebSocket.OPEN
+          ) {
+            state.upstream.send(text)
+          }
           break
 
         default:
