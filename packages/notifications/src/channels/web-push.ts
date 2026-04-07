@@ -65,7 +65,7 @@ export async function sendWebPush(
         coupleId: opts?.coupleId ?? null,
         type: opts?.type ?? 'unknown',
         channel: 'web_push',
-        payload: payload as Record<string, unknown>,
+        payload: payload as unknown as Record<string, unknown>,
         status: 'pending',
         sourceId: opts?.sourceId ?? null,
       })

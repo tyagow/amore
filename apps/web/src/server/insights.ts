@@ -176,10 +176,27 @@ export const getInsightsData = createServerFn({ method: 'GET' }).handler(
         dailyAverage: Math.round(totalMessages / activeDays),
         last7Days: Number(stats.last_7_days || 0),
       },
-      myProfile,
-      partnerProfile,
+      myProfile: myProfile
+        ? {
+            ...myProfile,
+            loveLanguages: myProfile.loveLanguages as Record<string, {}> | null,
+            communicationStyle: myProfile.communicationStyle as Record<string, {}> | null,
+            interests: myProfile.interests as Record<string, {}> | null,
+          }
+        : undefined,
+      partnerProfile: partnerProfile
+        ? {
+            ...partnerProfile,
+            loveLanguages: partnerProfile.loveLanguages as Record<string, {}> | null,
+            communicationStyle: partnerProfile.communicationStyle as Record<string, {}> | null,
+            interests: partnerProfile.interests as Record<string, {}> | null,
+          }
+        : undefined,
       moodHistory,
-      entities,
+      entities: entities.map((e) => ({
+        ...e,
+        content: e.content as {},
+      })),
       hourlyActivity: (
         (hourlyActivity as any).rows || hourlyActivity
       ) as Array<{ dow: number; hour: number; count: number }>,

@@ -22,7 +22,7 @@ export const setMood = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { session, couple } = await requireCouple()
+    const { session, couple, partnerId } = await requireCouple()
 
     // Mood expires after 24 hours
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)

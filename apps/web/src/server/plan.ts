@@ -1,6 +1,6 @@
 import { db } from '@amore-couples/db'
 import { users, featureUsage, couples } from '@amore-couples/db/schema'
-import { eq, and, gte, sql, or } from 'drizzle-orm'
+import { eq, and, gte, sql } from 'drizzle-orm'
 
 // ── Plan Limits ─────────────────────────────────────────
 
