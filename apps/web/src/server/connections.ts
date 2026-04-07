@@ -232,7 +232,10 @@ export const getMyCouple = createServerFn({ method: 'GET' }).handler(
           eq(couples.userAId, session.user.id),
           eq(couples.userBId, session.user.id),
         ),
-        eq(couples.status, 'active'),
+        or(
+          eq(couples.status, 'active'),
+          eq(couples.status, 'solo'),
+        ),
       ),
     })
 

@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, varchar, text, timestamp, integer,
-  real, boolean, jsonb, index, uniqueIndex, primaryKey,
+  real, boolean, jsonb, index, uniqueIndex, primaryKey, date,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 
@@ -236,12 +236,14 @@ export const coupleEntities = pgTable('couple_entities', {
 
 export const coachThreads = pgTable('coach_threads', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  coupleId: uuid('couple_id').references(() => couples.id, { onDelete: 'cascade' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('coach_threads_couple_idx').on(table.coupleId),
+  index('coach_threads_user_idx').on(table.userId),
 ])
 
 export const coachMessages = pgTable('coach_messages', {
@@ -277,6 +279,55 @@ export const coachNudges = pgTable('coach_nudges', {
   index('coach_nudges_couple_idx').on(table.coupleId),
 ])
 
+// ── Chat Exports ──────────────────────────────────────
+
+export const chatExports = pgTable('chat_exports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.id),
+  coupleId: uuid('couple_id').references(() => couples.id),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  messageCount: integer('message_count').notNull(),
+  dateRangeStart: timestamp('date_range_start'),
+  dateRangeEnd: timestamp('date_range_end'),
+  senderNames: jsonb('sender_names').notNull(),
+  userSenderName: varchar('user_sender_name', { length: 255 }),
+  status: varchar('status', { length: 20 }).notNull().default('processing'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('chat_exports_user_idx').on(table.userId),
+])
+
+// ── Daily Check-ins ────────────────────────────────────
+
+export const dailyCheckins = pgTable('daily_checkins', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id),
+  mood: varchar('mood', { length: 20 }).notNull(),
+  note: text('note'),
+  question: text('question').notNull(),
+  answer: text('answer'),
+  date: date('date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('daily_checkins_couple_idx').on(table.coupleId),
+  index('daily_checkins_date_idx').on(table.date),
+  uniqueIndex('daily_checkins_user_date_unique').on(table.coupleId, table.userId, table.date),
+])
+
+// ── Engagement Streaks ─────────────────────────────────
+
+export const engagementStreaks = pgTable('engagement_streaks', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id),
+  currentStreak: integer('current_streak').notNull().default(0),
+  longestStreak: integer('longest_streak').notNull().default(0),
+  lastCheckinDate: date('last_checkin_date'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('engagement_streaks_user_unique').on(table.userId),
+])
+
 // ── Relations ─────────────────────────────────────────
 
 export const couplesRelations = relations(couples, ({ many }) => ({
@@ -306,6 +357,10 @@ export const coachThreadsRelations = relations(coachThreads, ({ one, many }) => 
     fields: [coachThreads.coupleId],
     references: [couples.id],
   }),
+  user: one(users, {
+    fields: [coachThreads.userId],
+    references: [users.id],
+  }),
   messages: many(coachMessages),
 }))
 
@@ -331,5 +386,23 @@ export const coachNudgesRelations = relations(coachNudges, ({ one }) => ({
   couple: one(couples, {
     fields: [coachNudges.coupleId],
     references: [couples.id],
+  }),
+}))
+
+export const dailyCheckinsRelations = relations(dailyCheckins, ({ one }) => ({
+  couple: one(couples, {
+    fields: [dailyCheckins.coupleId],
+    references: [couples.id],
+  }),
+  user: one(users, {
+    fields: [dailyCheckins.userId],
+    references: [users.id],
+  }),
+}))
+
+export const engagementStreaksRelations = relations(engagementStreaks, ({ one }) => ({
+  user: one(users, {
+    fields: [engagementStreaks.userId],
+    references: [users.id],
   }),
 }))

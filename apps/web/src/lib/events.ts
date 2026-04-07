@@ -3,7 +3,7 @@ import { EventEmitter } from 'events'
 const emitter = new EventEmitter()
 emitter.setMaxListeners(100)
 
-export type CoupleEventType = 'mood_update' | 'goal_update' | 'insight_update' | 'analysis_complete'
+export type CoupleEventType = 'mood_update' | 'goal_update' | 'insight_update' | 'analysis_complete' | 'checkin_update'
 
 export interface CoupleEvent {
   type: CoupleEventType

@@ -7,6 +7,6 @@ export interface Message {
   timestamp: Date
   sentiment: number | null
   isMedia: boolean
-  source: 'baileys'
+  source: 'baileys' | 'export'
   createdAt: Date
 }

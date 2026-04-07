@@ -73,13 +73,15 @@ function AuthenticatedLayout() {
   const [coachOpen, setCoachOpen] = useState(false)
   const [hasNudges, setHasNudges] = useState(false)
 
+  // Listen for coach open events from child components (e.g. SoloOnboarding CTA)
   useEffect(() => {
-    if (!hasCouple) {
-      setHasNudges(false)
-      setCoachOpen(false)
-      return
-    }
+    const handler = () => setCoachOpen(true)
+    window.addEventListener('amore:open-coach', handler)
+    return () => window.removeEventListener('amore:open-coach', handler)
+  }, [])
 
+  useEffect(() => {
+    // Load nudges — works for both solo and coupled users (solo returns empty)
     getCoachNudges()
       .then((nudges) => {
         setHasNudges(nudges.length > 0)
@@ -99,9 +101,7 @@ function AuthenticatedLayout() {
         pendingRequestCount={pendingRequestCount}
         coachOpen={coachOpen}
         hasNudges={hasNudges}
-        onCoachToggle={
-          hasCouple ? () => setCoachOpen((open) => !open) : undefined
-        }
+        onCoachToggle={() => setCoachOpen((open) => !open)}
       />
 
       {/* Page content — offset for desktop sidebar, bottom padding for mobile nav */}
@@ -109,7 +109,7 @@ function AuthenticatedLayout() {
         <Outlet />
       </div>
 
-      {hasCouple && coachOpen && (
+      {coachOpen && (
         <div className="fixed inset-y-0 right-0 z-40 hidden w-[22rem] lg:block">
           <CoachSidebar
             currentPage={currentPage}
@@ -118,7 +118,7 @@ function AuthenticatedLayout() {
         </div>
       )}
 
-      {hasCouple && coachOpen && (
+      {coachOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <CoachSidebar
             currentPage={currentPage}
@@ -127,7 +127,7 @@ function AuthenticatedLayout() {
         </div>
       )}
 
-      {hasCouple && !coachOpen && (
+      {!coachOpen && (
         <button
           onClick={() => setCoachOpen(true)}
           className="fixed bottom-28 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-coral-500 text-white shadow-lg transition-all hover:bg-coral-600 active:scale-95 lg:hidden"

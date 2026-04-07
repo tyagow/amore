@@ -2,7 +2,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { auth } from '~/lib/auth'
 import { db } from '@amore-couples/db'
 import { couples } from '@amore-couples/db/schema'
-import { eq, or } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 
 /**
  * Shared authorization helper: verifies the authenticated user belongs to a couple.
@@ -18,14 +18,64 @@ export async function requireCouple() {
   }
 
   const couple = await db.query.couples.findFirst({
-    where: or(
-      eq(couples.userAId, session.user.id),
-      eq(couples.userBId, session.user.id),
+    where: and(
+      or(
+        eq(couples.userAId, session.user.id),
+        eq(couples.userBId, session.user.id),
+      ),
+      inArray(couples.status, ['active', 'solo']),
     ),
   })
 
-  if (!couple || couple.status !== 'active') {
+  if (!couple) {
     throw new Error('No active couple found')
+  }
+
+  const partnerId = couple.userAId === session.user.id
+    ? couple.userBId
+    : couple.userAId
+
+  return { session, couple, partnerId }
+}
+
+/**
+ * Get authenticated session only (no couple required).
+ * Use for solo-user features like solo coach.
+ */
+export async function requireAuth() {
+  const session = await auth.api.getSession({
+    headers: getRequestHeaders(),
+  })
+  if (!session) {
+    throw new Error('Unauthorized')
+  }
+  return session
+}
+
+/**
+ * Try to get couple, return null if none exists.
+ * Use when a feature works both with and without a couple.
+ */
+export async function optionalCouple() {
+  const session = await auth.api.getSession({
+    headers: getRequestHeaders(),
+  })
+  if (!session) {
+    throw new Error('Unauthorized')
+  }
+
+  const couple = await db.query.couples.findFirst({
+    where: and(
+      or(
+        eq(couples.userAId, session.user.id),
+        eq(couples.userBId, session.user.id),
+      ),
+      inArray(couples.status, ['active', 'solo']),
+    ),
+  })
+
+  if (!couple) {
+    return { session, couple: null, partnerId: null }
   }
 
   const partnerId = couple.userAId === session.user.id

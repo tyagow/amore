@@ -17,6 +17,8 @@ import { PatternCards } from './-components/pattern-cards'
 import { MoodDetectionModal } from './-components/mood-detection-modal'
 import { OnboardingCard } from './-components/onboarding-card'
 import { InstallBanner } from './-components/install-banner'
+import { DailyCheckinCard } from './-components/daily-checkin-card'
+import { getDailyCheckin } from '~/server/checkin'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   loader: async ({ context }) => {
@@ -24,17 +26,18 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
       const pendingRequests = await getPendingRequests()
       return { hasCouple: false as const, pendingRequests }
     }
-    const [intelligence, activeCoaching, pendingMoodDetections] = await Promise.all([
+    const [intelligence, activeCoaching, pendingMoodDetections, dailyCheckin] = await Promise.all([
       getIntelligence(),
       getActiveCoaching(),
       getPendingMoodDetections(),
+      getDailyCheckin(),
     ])
-    return { hasCouple: true as const, ...intelligence, activeCoaching, pendingMoodDetections }
+    return { hasCouple: true as const, ...intelligence, activeCoaching, pendingMoodDetections, dailyCheckin }
   },
   component: DashboardPage,
 })
 
-function SoloWelcome({ pendingRequests }: {
+function SoloOnboarding({ pendingRequests }: {
   pendingRequests: Awaited<ReturnType<typeof getPendingRequests>>
 }) {
   const router = useRouter()
@@ -60,8 +63,13 @@ function SoloWelcome({ pendingRequests }: {
     }
   }
 
+  // Dispatch custom event to open coach sidebar from parent layout
+  const openCoach = () => {
+    window.dispatchEvent(new CustomEvent('amore:open-coach'))
+  }
+
   return (
-    <div className="max-w-xl mx-auto px-6 py-16 space-y-8">
+    <div className="max-w-xl mx-auto px-6 py-10 space-y-6">
       {/* Pending invitations — shown prominently */}
       {pendingRequests.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
@@ -109,30 +117,82 @@ function SoloWelcome({ pendingRequests }: {
         </div>
       )}
 
-      {/* Welcome + invite CTA */}
+      {/* Welcome header */}
       <div className="text-center">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-coral-50 flex items-center justify-center">
-          <svg className="w-10 h-10 text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        <h1 className="font-display text-3xl text-warm-900 mb-2">Welcome to Amore</h1>
+        <p className="text-warm-500 leading-relaxed">
+          Get started by talking to your coach or uploading a conversation for instant insights.
+        </p>
+      </div>
+
+      {/* Coach CTA card */}
+      <button
+        onClick={openCoach}
+        className="w-full text-left bg-white border border-warm-200 rounded-2xl p-6 shadow-sm hover:border-coral-200 hover:shadow-md transition-all group"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-coral-50 text-coral-500 group-hover:bg-coral-100 transition-colors">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-warm-900 mb-1">Talk to your relationship coach</h3>
+            <p className="text-sm text-warm-500 leading-relaxed">
+              Get personalized guidance on communication, conflict resolution, and relationship growth. No partner connection required.
+            </p>
+          </div>
+          <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-coral-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <h1 className="font-display text-3xl text-warm-900 mb-3">Welcome to Amore</h1>
-        <p className="text-warm-500 mb-8 leading-relaxed">
-          {pendingRequests.length > 0
-            ? 'Accept the invitation above to get started, or invite someone else below.'
-            : 'Connect with your partner to unlock relationship insights, shared goals, and AI-powered coaching.'}
-        </p>
-        <Link
-          to="/connect"
-          className={`inline-block px-6 py-3 rounded-xl font-medium transition-colors shadow-sm shadow-coral-200 ${
-            pendingRequests.length > 0
-              ? 'border border-warm-300 text-warm-700 hover:bg-warm-100'
-              : 'bg-coral-500 text-white hover:bg-coral-600'
-          }`}
-        >
-          {pendingRequests.length > 0 ? 'Invite someone else' : 'Connect with your partner'}
-        </Link>
-      </div>
+      </button>
+
+      {/* Chat export upload CTA */}
+      <Link
+        to="/upload"
+        className="block w-full text-left bg-white border border-warm-200 rounded-2xl p-6 shadow-sm hover:border-coral-200 hover:shadow-md transition-all group"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-500 group-hover:bg-violet-100 transition-colors">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-warm-900 mb-1">Upload a WhatsApp chat</h3>
+            <p className="text-sm text-warm-500 leading-relaxed">
+              Export a conversation from WhatsApp and get a health score and relationship insights in under a minute.
+            </p>
+          </div>
+          <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-coral-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+
+      {/* Partner connection — deprioritized */}
+      <Link
+        to="/connect"
+        className="block w-full text-left bg-warm-50 border border-warm-200/60 rounded-2xl p-6 hover:border-warm-300 transition-all group"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-warm-100 text-warm-400 group-hover:text-warm-500 transition-colors">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-warm-700 mb-1">Connect with your partner</h3>
+            <p className="text-sm text-warm-400 leading-relaxed">
+              Invite your partner to unlock live WhatsApp analysis, shared goals, and mood tracking.
+            </p>
+          </div>
+          <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-warm-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
     </div>
   )
 }
@@ -142,7 +202,7 @@ function DashboardPage() {
 
   if (!data.hasCouple) {
     const { pendingRequests } = data as Extract<typeof data, { hasCouple: false }>
-    return <SoloWelcome pendingRequests={pendingRequests} />
+    return <SoloOnboarding pendingRequests={pendingRequests} />
   }
 
   return <CouplesDashboard data={data as Extract<typeof data, { hasCouple: true }>} />
@@ -183,6 +243,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
       <InstallBanner />
+      <DailyCheckinCard data={data.dailyCheckin} />
       <CoupleHero
         userName={data.userName}
         partnerName={data.partner?.name ?? null}

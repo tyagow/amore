@@ -119,6 +119,35 @@ function formatJson(value: unknown): string {
   }
 }
 
+function buildSoloSystemPrompt(currentPage?: string): string {
+  const parts: string[] = [
+    `You are Amore's relationship coach. This user is exploring relationship coaching on their own — they haven't connected a partner yet, so you have no conversation data or couple analytics.
+
+Rules:
+- Focus on self-reflection, communication skills, and relationship readiness.
+- Give concrete, actionable advice — not generic encouragement.
+- Ask thoughtful questions to understand their situation.
+- Help them articulate relationship dynamics, needs, and patterns.
+- Keep most responses to 2-4 short paragraphs unless more depth is needed.
+- Never reference couple data, health scores, or partner-specific analysis — you don't have any.
+- You can discuss general relationship topics: attachment styles, communication patterns, conflict resolution, emotional intelligence, love languages, boundaries.`,
+  ]
+
+  if (currentPage) {
+    const pageCopy: Record<string, string> = {
+      dashboard: 'The user opened you from the dashboard.',
+      connect: 'The user is on the couple connection page — they may be thinking about connecting with a partner.',
+      setup: 'The user is in setup.',
+      upload: 'The user is on the chat upload page.',
+    }
+    if (pageCopy[currentPage]) {
+      parts.push(pageCopy[currentPage])
+    }
+  }
+
+  return parts.join('\n\n')
+}
+
 function buildSystemPrompt(
   context: Partial<CoachContext>,
   currentPage?: string,
@@ -233,9 +262,12 @@ export async function streamCoachResponse(
   newMessage: string,
   context: Partial<CoachContext>,
   currentPage?: string,
+  isSolo?: boolean,
 ): Promise<AsyncIterable<string>> {
   const client = getClient()
-  const system = buildSystemPrompt(context, currentPage)
+  const system = isSolo
+    ? buildSoloSystemPrompt(currentPage)
+    : buildSystemPrompt(context, currentPage)
 
   const stream = client.messages.stream({
     model: AI_MODEL,

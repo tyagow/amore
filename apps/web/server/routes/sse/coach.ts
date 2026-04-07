@@ -2,7 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { auth } from '../../../src/lib/auth'
 import { db } from '@amore-couples/db'
 import { coachMessages, coachThreads, couples } from '@amore-couples/db/schema'
-import { and, asc, eq, or } from 'drizzle-orm'
+import { and, asc, eq, isNull, or } from 'drizzle-orm'
 import {
   classifyIntent,
   streamCoachResponse,
@@ -32,33 +32,45 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
+  // Try to find a couple (active or solo), but don't require one
   const couple = await db.query.couples.findFirst({
-    where: or(
-      eq(couples.userAId, session.user.id),
-      eq(couples.userBId, session.user.id),
-    ),
-  })
-
-  if (!couple || couple.status !== 'active') {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'No active couple found',
-    })
-  }
-
-  const thread = await db.query.coachThreads.findFirst({
     where: and(
-      eq(coachThreads.id, threadId),
-      eq(coachThreads.coupleId, couple.id),
+      or(
+        eq(couples.userAId, session.user.id),
+        eq(couples.userBId, session.user.id),
+      ),
+      or(
+        eq(couples.status, 'active'),
+        eq(couples.status, 'solo'),
+      ),
     ),
   })
+
+  // Verify thread ownership — either by couple or by userId
+  const thread = couple
+    ? await db.query.coachThreads.findFirst({
+        where: and(
+          eq(coachThreads.id, threadId),
+          or(
+            eq(coachThreads.coupleId, couple.id),
+            and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
+          ),
+        ),
+      })
+    : await db.query.coachThreads.findFirst({
+        where: and(
+          eq(coachThreads.id, threadId),
+          eq(coachThreads.userId, session.user.id),
+        ),
+      })
 
   if (!thread) {
     throw createError({ statusCode: 404, statusMessage: 'Thread not found' })
   }
 
-  const partnerId =
-    couple.userAId === session.user.id ? couple.userBId : couple.userAId
+  const partnerId = couple
+    ? (couple.userAId === session.user.id ? couple.userBId : couple.userAId)
+    : null
 
   const historyRows = await db.query.coachMessages.findMany({
     where: eq(coachMessages.threadId, threadId),
@@ -75,17 +87,18 @@ export default defineEventHandler(async (event) => {
   }))
 
   const intent = await classifyIntent(message)
-  const contextSnapshot = await fetchCoachContext(
-    couple.id,
-    session.user.id,
-    partnerId,
-    intent,
-  )
+
+  // Build context — full context for coupled users, minimal for solo
+  const contextSnapshot = couple && partnerId
+    ? await fetchCoachContext(couple.id, session.user.id, partnerId, intent)
+    : {}  // Solo user — empty context, coach uses solo system prompt
+
   const textStream = await streamCoachResponse(
     threadHistory,
     message,
     contextSnapshot,
     currentPage,
+    !couple,  // isSolo flag
   )
 
   const body = new ReadableStream({
