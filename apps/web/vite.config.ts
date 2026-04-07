@@ -41,6 +41,9 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       includeAssets: ['favicon-32x32.png', 'apple-touch-icon-180x180.png'],
       manifest: {
@@ -59,24 +62,8 @@ const config = defineConfig({
           { src: '/pwa-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        navigateFallbackDenylist: [/^\/api\//, /^\/sse\//, /^\/ws\//, /^\/_server\//],
-        navigateFallback: '/offline.html',
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'google-fonts-stylesheets', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'google-fonts-webfonts', expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-          { urlPattern: /^\/_server\//, handler: 'NetworkOnly' },
-          { urlPattern: /^\/api\//, handler: 'NetworkOnly' },
-          { urlPattern: /^\/sse\//, handler: 'NetworkOnly' },
-        ],
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
     copySwToNitroOutput(),

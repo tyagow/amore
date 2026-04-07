@@ -7,6 +7,7 @@ import { eq, and, desc } from 'drizzle-orm'
 import { emitCoupleEvent } from '~/lib/events'
 import { getClient } from '@amore-couples/ai/client'
 import { FAST_MODEL, parseAIResponse } from '@amore-couples/ai/config'
+import { notifyGoalCompleted } from '@amore-couples/notifications'
 
 // ── Server Functions ────────────────────────────────────
 
@@ -91,7 +92,7 @@ export const getCompletedGoals = createServerFn({ method: 'GET' }).handler(
 export const completeGoal = createServerFn({ method: 'POST' })
   .inputValidator(z.object({ goalId: z.string() }))
   .handler(async ({ data }) => {
-    const { couple } = await requireCouple()
+    const { session, couple, partnerId } = await requireCouple()
 
     const [updated] = await db
       .update(coupleGoals)
@@ -112,6 +113,14 @@ export const completeGoal = createServerFn({ method: 'POST' })
       type: 'goal_update',
       data: { action: 'completed', goalId: data.goalId },
     })
+
+    // Notify partner about goal completion (non-blocking)
+    notifyGoalCompleted(
+      partnerId,
+      session.user.name ?? 'Your partner',
+      updated.title,
+      { coupleId: couple.id, sourceId: updated.id },
+    ).catch((err) => console.error('[push] goal notification failed:', err))
 
     return { success: true }
   })

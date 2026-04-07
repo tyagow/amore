@@ -1,0 +1,23 @@
+{
+  "name": "@amore-couples/notifications",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dispatch": "./src/dispatch.ts",
+    "./channels/web-push": "./src/channels/web-push.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@amore-couples/db": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/web-push": "^3.6.4",
+    "typescript": "^5.7.2"
+  }
+}

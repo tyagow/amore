@@ -6,6 +6,7 @@ import { db } from '@amore-couples/db'
 import { users, couples, connectionRequests } from '@amore-couples/db/schema'
 import { eq, and, or } from 'drizzle-orm'
 import { emitUserEvent } from '~/lib/events'
+import { notifyConnectionAccepted } from '@amore-couples/notifications'
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -192,6 +193,13 @@ export const acceptConnectionRequest = createServerFn({ method: 'POST' })
         acceptedByEmail: session.user.email,
       },
     })
+
+    // Send push notification to requester (non-blocking)
+    notifyConnectionAccepted(
+      request.fromUserId,
+      session.user.name ?? 'Your partner',
+      { sourceId: requestId },
+    ).catch((err) => console.error('[push] connection notification failed:', err))
 
     return { success: true }
   })

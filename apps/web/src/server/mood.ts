@@ -2,9 +2,10 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
-import { moodStates } from '@amore-couples/db/schema'
+import { moodStates, users } from '@amore-couples/db/schema'
 import { eq, and, desc, gte } from 'drizzle-orm'
 import { emitCoupleEvent } from '~/lib/events'
+import { notifyMoodAlert } from '@amore-couples/notifications'
 
 // ── Server Functions ────────────────────────────────────
 
@@ -49,6 +50,15 @@ export const setMood = createServerFn({ method: 'POST' })
           note: data.note ?? null,
         },
       })
+
+      // Send push notification to partner (non-blocking)
+      notifyMoodAlert(
+        partnerId,
+        session.user.name ?? 'Your partner',
+        data.mood,
+        data.note ?? null,
+        { coupleId: couple.id, sourceId: inserted.id },
+      ).catch((err) => console.error('[push] mood alert failed:', err))
     }
 
     return { success: true, id: inserted.id }
