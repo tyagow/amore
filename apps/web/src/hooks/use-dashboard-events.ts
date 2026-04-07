@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 type DashboardEvent =
   | { type: 'mood_update'; data: { userId: string; mood: string; visibility: string } }
@@ -9,22 +9,55 @@ type DashboardEvent =
 export type { DashboardEvent }
 
 export function useDashboardEvents(onEvent: (event: DashboardEvent) => void) {
-  useEffect(() => {
-    const source = new EventSource('/sse/updates')
+  const onEventRef = useRef(onEvent)
+  onEventRef.current = onEvent
 
-    source.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data) as DashboardEvent
-        onEvent(event)
-      } catch {
-        /* ignore parse errors */
+  useEffect(() => {
+    let source: EventSource | null = null
+
+    function connect() {
+      if (!navigator.onLine) return
+      if (source) {
+        source.close()
+        source = null
+      }
+
+      source = new EventSource('/sse/updates')
+
+      source.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data) as DashboardEvent
+          onEventRef.current(event)
+        } catch {
+          /* ignore parse errors */
+        }
+      }
+
+      source.onerror = () => {
+        // EventSource auto-reconnects
       }
     }
 
-    source.onerror = () => {
-      // EventSource auto-reconnects
+    function handleOffline() {
+      if (source) {
+        source.close()
+        source = null
+      }
     }
 
-    return () => source.close()
-  }, [onEvent])
+    function handleOnline() {
+      connect()
+    }
+
+    connect()
+
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+      if (source) source.close()
+    }
+  }, [])
 }
