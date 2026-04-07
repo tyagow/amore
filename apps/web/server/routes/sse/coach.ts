@@ -9,6 +9,12 @@ import {
   type ThreadMessage,
 } from '@amore-couples/ai'
 import { fetchCoachContext } from '../../lib/coach-context'
+import {
+  getUserPlan,
+  getUserPlanSolo,
+  checkFeatureAccess,
+  incrementUsage,
+} from '../../../src/server/plan'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -66,6 +72,40 @@ export default defineEventHandler(async (event) => {
 
   if (!thread) {
     throw createError({ statusCode: 404, statusMessage: 'Thread not found' })
+  }
+
+  // ── Plan gate: check coach message limit ──────────────
+  const plan = couple
+    ? await getUserPlan(couple.id)
+    : await getUserPlanSolo(session.user.id)
+
+  if (plan === 'free') {
+    const access = await checkFeatureAccess(session.user.id, plan, 'coach_message')
+    if (!access.allowed) {
+      // Return limit_reached as SSE event and close stream
+      const encoder = new TextEncoder()
+      const limitPayload = JSON.stringify({
+        type: 'limit_reached',
+        feature: 'coach_message',
+        limit: access.limit,
+        used: access.used,
+        resetAt: access.resetAt,
+        upgradeUrl: '/pricing',
+      })
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${limitPayload}\n\n`))
+          controller.close()
+        },
+      })
+      return new Response(body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      })
+    }
   }
 
   const partnerId = couple
@@ -142,6 +182,11 @@ export default defineEventHandler(async (event) => {
           if (closed) break
           fullResponse += chunk
           send({ type: 'text', content: chunk })
+        }
+
+        // Track usage for free users after successful stream
+        if (plan === 'free') {
+          await incrementUsage(session.user.id, 'coach_message')
         }
 
         send({

@@ -3,6 +3,7 @@ import { auth } from '~/lib/auth'
 import { db } from '@amore-couples/db'
 import { couples } from '@amore-couples/db/schema'
 import { and, eq, inArray, or } from 'drizzle-orm'
+import { getUserPlan, getUserPlanSolo, type Plan } from './plan'
 
 /**
  * Shared authorization helper: verifies the authenticated user belongs to a couple.
@@ -35,7 +36,9 @@ export async function requireCouple() {
     ? couple.userBId
     : couple.userAId
 
-  return { session, couple, partnerId }
+  const plan = await getUserPlan(couple.id)
+
+  return { session, couple, partnerId, plan }
 }
 
 /**
@@ -75,12 +78,15 @@ export async function optionalCouple() {
   })
 
   if (!couple) {
-    return { session, couple: null, partnerId: null }
+    const plan = await getUserPlanSolo(session.user.id)
+    return { session, couple: null, partnerId: null, plan }
   }
 
   const partnerId = couple.userAId === session.user.id
     ? couple.userBId
     : couple.userAId
 
-  return { session, couple, partnerId }
+  const plan = await getUserPlan(couple.id)
+
+  return { session, couple, partnerId, plan }
 }

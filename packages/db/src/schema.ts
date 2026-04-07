@@ -4,6 +4,61 @@ import {
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 
+// ── Push Subscriptions ──────────────────────────────────
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastUsedAt: timestamp('last_used_at'),
+}, (table) => [
+  index('push_subscriptions_user_idx').on(table.userId),
+])
+
+// ── Notification Preferences ────────────────────────────
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  moodAlerts: boolean('mood_alerts').notNull().default(true),
+  coachNudges: boolean('coach_nudges').notNull().default(true),
+  scoreDrops: boolean('score_drops').notNull().default(true),
+  milestones: boolean('milestones').notNull().default(true),
+  goalUpdates: boolean('goal_updates').notNull().default(true),
+  weeklyDigest: boolean('weekly_digest').notNull().default(false),
+  pushEnabled: boolean('push_enabled').notNull().default(true),
+  emailEnabled: boolean('email_enabled').notNull().default(true),
+  quietStart: varchar('quiet_start', { length: 5 }),
+  quietEnd: varchar('quiet_end', { length: 5 }),
+  timezone: varchar('timezone', { length: 50 }),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+// ── Notification Deliveries (audit log) ─────────────────
+
+export const notificationDeliveries = pgTable('notification_deliveries', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  coupleId: uuid('couple_id').references(() => couples.id),
+  type: varchar('type', { length: 50 }).notNull(),
+  channel: varchar('channel', { length: 20 }).notNull(),
+  payload: jsonb('payload').notNull(),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  sourceId: text('source_id'),
+  deliveredAt: timestamp('delivered_at'),
+  clickedAt: timestamp('clicked_at'),
+  failureReason: text('failure_reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('notification_deliveries_user_idx').on(table.userId),
+  index('notification_deliveries_type_idx').on(table.type),
+  index('notification_deliveries_created_idx').on(table.createdAt),
+])
+
 // ── Better Auth tables ──────────────────────────────────
 
 export const users = pgTable('users', {
@@ -327,6 +382,30 @@ export const engagementStreaks = pgTable('engagement_streaks', {
 }, (table) => [
   uniqueIndex('engagement_streaks_user_unique').on(table.userId),
 ])
+
+// ── Feature Usage (monetization gating) ───────────────
+
+export const featureUsage = pgTable('feature_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  feature: varchar('feature', { length: 50 }).notNull(),
+  usedAt: timestamp('used_at').notNull().defaultNow(),
+}, (table) => [
+  index('idx_feature_usage_lookup').on(table.userId, table.feature, table.usedAt),
+])
+
+// ── Subscriptions (Stripe, for future Phase 4) ───────
+
+export const subscriptions = pgTable('subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  status: varchar('status', { length: 50 }).notNull().default('inactive'),
+  currentPeriodEnd: timestamp('current_period_end'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
 
 // ── Relations ─────────────────────────────────────────
 

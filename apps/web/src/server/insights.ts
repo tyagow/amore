@@ -12,6 +12,7 @@ import {
   users,
 } from '@amore-couples/db/schema'
 import { eq, desc, sql, and, gte } from 'drizzle-orm'
+import { GATED_TABS } from './plan'
 
 /**
  * Full insights data for the dedicated insights page.
@@ -19,7 +20,7 @@ import { eq, desc, sql, and, gte } from 'drizzle-orm'
  */
 export const getInsightsData = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const { session, couple, partnerId } = await requireCouple()
+    const { session, couple, partnerId, plan } = await requireCouple()
     const userId = session.user.id
     const coupleId = couple.id
 
@@ -149,6 +150,8 @@ export const getInsightsData = createServerFn({ method: 'GET' }).handler(
     const activeDays = Number(stats.active_days || 1)
 
     return {
+      plan,
+      gatedTabs: plan === 'free' ? ([...GATED_TABS] as string[]) : ([] as string[]),
       couple: {
         id: couple.id,
         healthScore: couple.healthScore,

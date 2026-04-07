@@ -4,6 +4,7 @@ import { requireCouple } from './require-couple'
 import { db } from '@amore-couples/db'
 import { userRelationshipProfiles, users } from '@amore-couples/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { PLAN_LIMITS, buildGatedResponse } from './plan'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -215,7 +216,12 @@ export const updateProfile = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { session, couple } = await requireCouple()
+    const { session, couple, plan } = await requireCouple()
+
+    // Gate: profile editing is premium-only
+    if (!PLAN_LIMITS[plan].profileEditing) {
+      return buildGatedResponse('profile_editing')
+    }
 
     // Get existing profile to merge
     const existing = await db.query.userRelationshipProfiles.findFirst({

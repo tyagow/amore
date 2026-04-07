@@ -15,6 +15,7 @@ import { eq, and, desc, asc, inArray, sql } from 'drizzle-orm'
 import { messages, couples as couplesTable } from '@amore-couples/db/schema'
 import { detectNudgeTriggers, runAnalysisPipeline } from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
+import { checkFeatureAccess, incrementUsage, buildGatedResponse } from './plan'
 
 /**
  * Unified intelligence data shared across dashboard and chat.
@@ -191,7 +192,16 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
  */
 export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
   async () => {
-    const { couple } = await requireCouple()
+    const { session, couple, plan } = await requireCouple()
+
+    // Gate: manual analysis has weekly limit for free users
+    if (plan === 'free') {
+      const access = await checkFeatureAccess(session.user.id, plan, 'manual_analysis')
+      if (!access.allowed) {
+        return buildGatedResponse('manual_analysis', access)
+      }
+    }
+
     const previousHealthScore = couple.healthScore
 
     try {
@@ -334,6 +344,11 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
               .where(eq(messages.id, msg.id))
           }
         }
+      }
+
+      // Track usage for free users
+      if (plan === 'free') {
+        await incrementUsage(session.user.id, 'manual_analysis')
       }
 
       return { status: 'analysis_complete', coupleId: couple.id, healthScore: output.healthScore }

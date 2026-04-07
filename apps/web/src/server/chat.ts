@@ -12,6 +12,12 @@ import {
   analyzeLiveMood,
   reviewMessageTone,
 } from '@amore-couples/ai'
+import {
+  checkFeatureAccess,
+  incrementUsage,
+  buildGatedResponse,
+  PLAN_LIMITS,
+} from './plan'
 
 // ── Shared Schema ───────────────────────────────────────
 
@@ -32,7 +38,12 @@ export const getChatAISuggestions = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { couple, partnerId } = await requireCouple()
+    const { couple, partnerId, plan } = await requireCouple()
+
+    // Gate: reply suggestions are premium-only
+    if (!PLAN_LIMITS[plan].replySuggestions) {
+      return buildGatedResponse('reply_suggestions')
+    }
 
     const partnerProfile = await db.query.userRelationshipProfiles.findFirst({
       where: and(
@@ -67,7 +78,12 @@ export const getChatAIMood = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { couple, partnerId } = await requireCouple()
+    const { couple, partnerId, plan } = await requireCouple()
+
+    // Gate: live mood analysis is premium-only
+    if (!PLAN_LIMITS[plan].liveMoodAnalysis) {
+      return buildGatedResponse('live_mood')
+    }
 
     // Get partner love languages
     const partnerProfile = await db.query.userRelationshipProfiles.findFirst({
@@ -116,7 +132,15 @@ export const getChatAIReview = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { couple, partnerId } = await requireCouple()
+    const { session, couple, partnerId, plan } = await requireCouple()
+
+    // Gate: tone review has daily limit for free users
+    if (plan === 'free') {
+      const access = await checkFeatureAccess(session.user.id, plan, 'tone_review')
+      if (!access.allowed) {
+        return buildGatedResponse('tone_review', access)
+      }
+    }
 
     const partnerProfile = await db.query.userRelationshipProfiles.findFirst({
       where: and(
@@ -137,6 +161,11 @@ export const getChatAIReview = createServerFn({ method: 'POST' })
       : undefined
 
     const result = await reviewMessageTone(data.draft, data.messages, profile)
+
+    // Track usage for free users
+    if (plan === 'free') {
+      await incrementUsage(session.user.id, 'tone_review')
+    }
 
     return result
   })
