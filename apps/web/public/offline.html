@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're offline — Amore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --coral: #C96B4F;
+      --coral-light: #D98872;
+      --coral-dark: #A85540;
+      --warm-50: #FAF8F5;
+      --warm-100: #F3EEE8;
+      --warm-200: #E5DDD4;
+      --text-primary: #2C1810;
+      --text-secondary: #6B4C3B;
+      --text-muted: #9B7B6B;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background-color: var(--warm-50);
+      color: var(--text-primary);
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .brand {
+      font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+      font-size: 2rem;
+      color: var(--coral);
+      letter-spacing: -0.01em;
+      margin-bottom: 3rem;
+    }
+
+    .icon-wrapper {
+      width: 80px;
+      height: 80px;
+      background-color: var(--warm-100);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      border: 2px solid var(--warm-200);
+    }
+
+    .icon-wrapper svg {
+      width: 36px;
+      height: 36px;
+      color: var(--coral);
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+      font-size: 1.75rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+
+    p {
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      font-weight: 300;
+    }
+
+    .try-again-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: var(--coral);
+      color: #fff;
+      border: none;
+      border-radius: 100px;
+      padding: 0.75rem 1.75rem;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+
+    .try-again-btn:hover {
+      background-color: var(--coral-dark);
+    }
+
+    .try-again-btn:active {
+      transform: scale(0.97);
+    }
+
+    .try-again-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .divider {
+      width: 40px;
+      height: 2px;
+      background-color: var(--warm-200);
+      border-radius: 2px;
+      margin: 2.5rem auto 1.5rem;
+    }
+
+    .hint {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      font-weight: 300;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">Amore</div>
+
+    <div class="icon-wrapper">
+      <!-- wifi-off icon -->
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+
+    <h1>You're offline</h1>
+    <p>It looks like you've lost your internet connection. Check your network and try again.</p>
+
+    <button class="try-again-btn" onclick="window.location.reload()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Try again
+    </button>
+
+    <div class="divider"></div>
+    <p class="hint">Your recent messages will be available once you're back online.</p>
+  </div>
+</body>
+</html>
