@@ -78,3 +78,18 @@ body::before {
   to { stroke-dashoffset: 0; }
 }
 .animate-draw { animation: drawLine 1.5s ease-out forwards; stroke-dasharray: 1000; }
+
+/* ── PWA safe-area utilities ──────────────────────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Overscroll suppression in standalone mode */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior: none;
+  }
+}

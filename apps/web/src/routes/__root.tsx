@@ -1,4 +1,5 @@
 import { HeadContent, Scripts, createRootRoute, type ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import appCss from '~/styles.css?url'
 
 function RootErrorComponent({ error, reset }: ErrorComponentProps) {
@@ -6,7 +7,7 @@ function RootErrorComponent({ error, reset }: ErrorComponentProps) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>Something went wrong — Amore Couples</title>
         <link rel="stylesheet" href={appCss} />
       </head>
@@ -35,11 +36,17 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
       { title: 'Amore Couples' },
+      { name: 'theme-color', content: '#C96B4F' },
+      { name: 'apple-mobile-web-app-capable', content: 'yes' },
+      { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon-180x180.png', sizes: '180x180' },
+      { rel: 'icon', href: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
     ],
   }),
   errorComponent: RootErrorComponent,
@@ -47,6 +54,14 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+        // SW registration failed -- non-critical
+      })
+    }
+  }, [])
+
   return (
     <html lang="en">
       <head>

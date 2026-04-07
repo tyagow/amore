@@ -16,6 +16,7 @@ import { CoachingCard } from './-components/coaching-card'
 import { PatternCards } from './-components/pattern-cards'
 import { MoodDetectionModal } from './-components/mood-detection-modal'
 import { OnboardingCard } from './-components/onboarding-card'
+import { InstallBanner } from './-components/install-banner'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   loader: async ({ context }) => {
@@ -181,6 +182,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <InstallBanner />
       <CoupleHero
         userName={data.userName}
         partnerName={data.partner?.name ?? null}

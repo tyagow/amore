@@ -11,6 +11,7 @@ interface UseChatWebSocketReturn {
   requestResync: () => void
   isResyncing: boolean
   partnerName: string
+  isOffline: boolean
 }
 
 interface QueuedMessage {
@@ -31,6 +32,7 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
   const [hasMore, setHasMore] = useState(false)
   const [isResyncing, setIsResyncing] = useState(false)
   const [partnerName, setPartnerName] = useState('Partner')
+  const [isOffline, setIsOffline] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectAttemptRef = useRef(0)
@@ -495,8 +497,26 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
     mountedRef.current = true
     connect()
 
+    const handleOffline = () => {
+      setIsOffline(true)
+    }
+
+    const handleOnline = () => {
+      setIsOffline(false)
+      // Reconnect when coming back online
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        reconnectAttemptRef.current = 0
+        connect()
+      }
+    }
+
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
     return () => {
       mountedRef.current = false
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current)
       }
@@ -523,5 +543,6 @@ export function useChatWebSocket(): UseChatWebSocketReturn {
     partnerName,
     requestResync,
     isResyncing,
+    isOffline,
   }
 }
