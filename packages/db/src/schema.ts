@@ -216,6 +216,8 @@ export const healthScoreHistory = pgTable('health_score_history', {
   coupleId: uuid('couple_id').notNull().references(() => couples.id),
   score: integer('score').notNull(),
   summary: text('summary'),
+  periodStart: timestamp('period_start'),
+  periodEnd: timestamp('period_end'),
   recordedAt: timestamp('recorded_at').defaultNow().notNull(),
 })
 

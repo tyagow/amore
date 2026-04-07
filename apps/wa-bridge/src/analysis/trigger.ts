@@ -1,7 +1,7 @@
 import { db } from '@amore-couples/db/client'
 import { couples, messages, moodStates } from '@amore-couples/db/schema'
 import { eq, sql, desc } from 'drizzle-orm'
-import { runAnalysis } from './run.js'
+import { runAnalysis, runHistoricalAnalysis } from './run.js'
 import { detectMoodShift } from '@amore-couples/ai'
 import { log } from '../logger.js'
 
@@ -54,7 +54,8 @@ export async function checkAndTriggerAnalysis(coupleId: string): Promise<void> {
 
     analysisInProgress.add(coupleId)
     // Fire-and-forget — don't block message ingest
-    runAnalysis(coupleId)
+    const analysisFn = isFirstAnalysis ? runHistoricalAnalysis : runAnalysis
+    analysisFn(coupleId)
       .catch((err) => {
         log.error({ err, coupleId }, 'Analysis pipeline failed')
       })
