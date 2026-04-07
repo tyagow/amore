@@ -6,6 +6,7 @@ import {
   updateProfile,
   type ProfileData,
 } from '~/server/profile'
+import { NotificationSettings } from './-components/notification-settings'
 
 export const Route = createFileRoute('/_authenticated/profile')({
   loader: async ({ context }) => {
@@ -486,8 +487,11 @@ function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Notification Settings ────────────────────────── */}
+      <NotificationSettings />
+
       {/* ── Partner's Profile (Read-Only) ────────────────── */}
-      <div className="space-y-6">
+      <div className="space-y-6 mt-10">
         <h2 className="font-display text-base text-warm-800">
           {partnerData.partnerName}&rsquo;s Profile
         </h2>
