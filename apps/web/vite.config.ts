@@ -5,6 +5,30 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { VitePWA } from 'vite-plugin-pwa'
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// Vite plugin: copy SW files from dist/ to .output/public/ for Nitro serving
+function copySwToNitroOutput(): import('vite').Plugin {
+  return {
+    name: 'copy-sw-to-nitro',
+    apply: 'build',
+    closeBundle() {
+      const distDir = resolve(__dirname, 'dist')
+      const outputDir = resolve(__dirname, '.output/public')
+      if (!existsSync(distDir)) return
+      if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true })
+      for (const f of readdirSync(distDir)) {
+        if (f === 'sw.js' || f.startsWith('workbox-')) {
+          copyFileSync(resolve(distDir, f), resolve(outputDir, f))
+        }
+      }
+    },
+  }
+}
 
 const config = defineConfig({
   plugins: [
@@ -55,6 +79,7 @@ const config = defineConfig({
         ],
       },
     }),
+    copySwToNitroOutput(),
   ],
 })
 
