@@ -11,6 +11,7 @@ import { getMyCouple } from '~/server/connections'
 import { getCoachNudges } from '~/server/coach'
 import { Nav } from './_authenticated/-components/nav'
 import { CoachSidebar } from './_authenticated/-components/coach-sidebar'
+import { OfflineIndicator } from './_authenticated/-components/offline-indicator'
 
 function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
@@ -93,6 +94,7 @@ function AuthenticatedLayout() {
 
   return (
     <div className="min-h-screen bg-warm-50">
+      <OfflineIndicator />
       <Nav
         pendingRequestCount={pendingRequestCount}
         coachOpen={coachOpen}
