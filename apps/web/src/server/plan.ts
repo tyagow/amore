@@ -144,7 +144,7 @@ export async function incrementUsage(
 
 // ── Helpers ─────────────────────────────────────────────
 
-function getFeatureWindow(feature: Feature): {
+export function getFeatureWindow(feature: Feature): {
   limit: number
   windowStart: Date
   resetAt: string
