@@ -35,6 +35,12 @@ const config = defineConfig({
     nitro({
       features: { websocket: true },
       serverDir: './server',
+      rollupConfig: {
+        external: [
+          /^@opentelemetry\//,
+          /^@sentry\//,
+        ],
+      },
     }),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
