@@ -25,6 +25,7 @@ RUN pnpm --filter @amore-couples/web build
 # Run
 FROM base AS runner
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/packages/notifications/node_modules ./packages/notifications/node_modules
 COPY --from=build /app/apps/web/.output ./apps/web/.output
