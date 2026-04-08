@@ -9,6 +9,7 @@ COPY apps/wa-bridge/package.json apps/wa-bridge/
 COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
 COPY packages/types/package.json packages/types/
+COPY packages/notifications/package.json packages/notifications/
 RUN pnpm install --frozen-lockfile
 
 # Run (tsx handles workspace .ts imports at runtime)
@@ -17,6 +18,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/wa-bridge/node_modules ./apps/wa-bridge/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/packages/ai/node_modules ./packages/ai/node_modules
+COPY --from=deps /app/packages/notifications/node_modules ./packages/notifications/node_modules
 COPY packages/ ./packages/
 COPY apps/wa-bridge/ ./apps/wa-bridge/
 COPY tsconfig.base.json ./
