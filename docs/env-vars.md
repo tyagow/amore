@@ -44,6 +44,7 @@ All required and optional environment variables for Amore Couples services.
 |----------|----------|-------------|
 | `STRIPE_SECRET_KEY` | No | Stripe API secret key for server-side billing. |
 | `STRIPE_WEBHOOK_SECRET` | No | Stripe webhook endpoint signing secret. |
+| `STRIPE_PRICE_ID` | No | Stripe recurring price ID for the Amore Premium subscription. |
 | `VITE_STRIPE_PUBLIC_KEY` | No | Stripe publishable key. Build-time variable for client. |
 
 ### Google OAuth (currently disabled)
