@@ -74,8 +74,8 @@ export const submitDailyCheckin = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       mood: z.enum(['great', 'good', 'neutral', 'low', 'struggling']),
-      note: z.string().optional(),
-      answer: z.string().optional(),
+      note: z.string().max(1000).optional(),
+      answer: z.string().max(2000).optional(),
     }),
   )
   .handler(async ({ data }) => {

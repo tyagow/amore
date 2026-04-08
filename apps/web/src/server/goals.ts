@@ -17,8 +17,8 @@ import { notifyGoalCompleted } from '@amore-couples/notifications'
 export const createGoal = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
-      title: z.string(),
-      description: z.string().optional(),
+      title: z.string().min(1).max(255),
+      description: z.string().max(1000).optional(),
       dueDate: z.string().optional(),
       source: z.enum(['user', 'ai_suggested']).optional(),
     }),

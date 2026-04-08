@@ -203,15 +203,15 @@ export const updateProfile = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       loveLanguages: z.object({
-        primary: z.string(),
-        secondary: z.string().optional(),
+        primary: z.string().min(1).max(100),
+        secondary: z.string().max(100).optional(),
       }).optional(),
       communicationStyle: z.object({
-        type: z.string(),
-        description: z.string(),
+        type: z.string().min(1).max(100),
+        description: z.string().min(1).max(500),
       }).optional(),
       interests: z.object({
-        items: z.array(z.string()),
+        items: z.array(z.string().max(100)).max(50),
       }).optional(),
     }),
   )

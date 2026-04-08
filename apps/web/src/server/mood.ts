@@ -18,7 +18,7 @@ export const setMood = createServerFn({ method: 'POST' })
     z.object({
       mood: z.enum(['great', 'good', 'neutral', 'low', 'struggling']),
       visibility: z.enum(['silent', 'visible', 'alert']),
-      note: z.string().optional(),
+      note: z.string().max(1000).optional(),
     }),
   )
   .handler(async ({ data }) => {
