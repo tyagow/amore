@@ -86,13 +86,22 @@ export async function sendWebPush(
         .set({ lastUsedAt: new Date() })
         .where(eq(pushSubscriptions.id, sub.id))
 
+      console.log(JSON.stringify({
+        type: 'push_delivery',
+        userId,
+        status: 'delivered',
+        notificationType: opts?.type ?? 'unknown',
+        timestamp: new Date().toISOString(),
+      }))
+
       sent++
     } catch (err: unknown) {
       const statusCode = (err as { statusCode?: number })?.statusCode
       const message = err instanceof Error ? err.message : String(err)
+      const expired = statusCode === 410 || statusCode === 404
 
       // HTTP 410 = subscription expired, delete it
-      if (statusCode === 410 || statusCode === 404) {
+      if (expired) {
         await db
           .delete(pushSubscriptions)
           .where(eq(pushSubscriptions.id, sub.id))
@@ -102,6 +111,14 @@ export async function sendWebPush(
         .update(notificationDeliveries)
         .set({ status: 'failed', failureReason: `${statusCode ?? 'unknown'}: ${message}` })
         .where(eq(notificationDeliveries.id, delivery.id))
+
+      console.log(JSON.stringify({
+        type: 'push_delivery',
+        userId,
+        status: expired ? 'expired' : 'failed',
+        notificationType: opts?.type ?? 'unknown',
+        timestamp: new Date().toISOString(),
+      }))
 
       failed++
     }

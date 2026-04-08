@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import { Pool } from 'pg'
 import { jwtVerify } from 'jose'
 import { eq, and } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { db } from '@amore-couples/db/client'
 import { messageMedia } from '@amore-couples/db/schema'
 import { SessionManager } from './sessions/manager.js'
@@ -41,7 +42,25 @@ app.use(
 )
 
 // Health endpoint (unprotected, before auth middleware)
-app.get('/health', (c) => c.json({ ok: true }))
+app.get('/health', async (c) => {
+  try {
+    await db.execute(sql`SELECT 1`)
+    return c.json({
+      ok: true,
+      service: 'wa-bridge',
+      db: 'connected',
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    return c.json({
+      ok: false,
+      service: 'wa-bridge',
+      db: 'disconnected',
+      error: String(error),
+      timestamp: new Date().toISOString(),
+    }, 503)
+  }
+})
 
 // Auth middleware: JWT verification (Authorization: Bearer <jwt>)
 const authMiddleware = async (c: any, next: any) => {

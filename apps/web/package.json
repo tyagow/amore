@@ -14,6 +14,7 @@
     "@amore-couples/db": "workspace:*",
     "@amore-couples/notifications": "workspace:*",
     "@amore-couples/types": "workspace:*",
+    "@sentry/node": "^10.47.0",
     "@tanstack/react-router": "^1.163.3",
     "@tanstack/react-start": "^1.166.1",
     "@types/qrcode": "^1.5.6",
