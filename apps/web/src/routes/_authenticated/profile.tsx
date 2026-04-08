@@ -7,6 +7,10 @@ import {
   type ProfileData,
 } from '~/server/profile'
 import { NotificationSettings } from './-components/notification-settings'
+import {
+  isUpgradeGateDetail,
+  openUpgradeModal,
+} from '~/lib/upgrade-gate'
 
 export const Route = createFileRoute('/_authenticated/profile')({
   loader: async ({ context }) => {
@@ -142,7 +146,7 @@ function ProfilePage() {
     setSaving(true)
     setError(null)
     try {
-      await updateProfile({
+      const result = await updateProfile({
         data: {
           loveLanguages: {
             primary: editLovePrimary,
@@ -150,6 +154,10 @@ function ProfilePage() {
           },
         },
       })
+      if (isUpgradeGateDetail(result)) {
+        openUpgradeModal(result)
+        return
+      }
       const updated = await getProfile()
       setProfile(updated)
       setEditing(null)
@@ -165,7 +173,7 @@ function ProfilePage() {
     setSaving(true)
     setError(null)
     try {
-      await updateProfile({
+      const result = await updateProfile({
         data: {
           communicationStyle: {
             type: editCommType,
@@ -173,6 +181,10 @@ function ProfilePage() {
           },
         },
       })
+      if (isUpgradeGateDetail(result)) {
+        openUpgradeModal(result)
+        return
+      }
       const updated = await getProfile()
       setProfile(updated)
       setEditing(null)
@@ -192,7 +204,11 @@ function ProfilePage() {
     setSaving(true)
     setError(null)
     try {
-      await updateProfile({ data: { interests: { items } } })
+      const result = await updateProfile({ data: { interests: { items } } })
+      if (isUpgradeGateDetail(result)) {
+        openUpgradeModal(result)
+        return
+      }
       const updated = await getProfile()
       setProfile(updated)
       setEditing(null)

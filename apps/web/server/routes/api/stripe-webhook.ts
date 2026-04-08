@@ -9,7 +9,7 @@ import { stripe } from '../../../src/lib/stripe'
 import {
   isPremiumSubscriptionStatus,
   syncSubscriptionFromStripe,
-} from '../../../src/server/billing'
+} from '../../../src/server/billing-core'
 
 function requireStripeClient() {
   if (!stripe) {

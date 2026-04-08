@@ -6,6 +6,10 @@ import {
   getChatAIReview,
 } from '~/server/chat'
 import { getIntelligence } from '~/server/intelligence'
+import {
+  isUpgradeGateDetail,
+  openUpgradeModal,
+} from '~/lib/upgrade-gate'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -229,6 +233,11 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
             messages: recentMessagePayload(messagesRef.current),
           },
         })
+        if (isUpgradeGateDetail(result)) {
+          openUpgradeModal(result)
+          setState((prev) => ({ ...prev, suggestionsLoading: false }))
+          return
+        }
         if (typeof result === 'object' && result !== null && 'error' in result) {
           setAiError((result as Record<string, unknown>).error as string)
         } else {
@@ -267,6 +276,11 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
       },
     })
       .then((result: unknown) => {
+        if (isUpgradeGateDetail(result)) {
+          openUpgradeModal(result)
+          setState((prev) => ({ ...prev, moodLoading: false }))
+          return
+        }
         const res = result as Record<string, unknown>
         if ('error' in res && typeof res.error === 'string') {
           setAiError(res.error)
@@ -306,6 +320,11 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
             messages: recentMessagePayload(messagesRef.current, 10),
           },
         })
+        if (isUpgradeGateDetail(result)) {
+          openUpgradeModal(result)
+          setState((prev) => ({ ...prev, reviewLoading: false }))
+          return
+        }
         if (typeof result === 'object' && result !== null && 'error' in result) {
           setAiError((result as Record<string, unknown>).error as string)
         } else {

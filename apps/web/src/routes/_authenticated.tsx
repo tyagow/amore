@@ -12,6 +12,7 @@ import { getCoachNudges } from '~/server/coach'
 import { Nav } from './_authenticated/-components/nav'
 import { CoachSidebar } from './_authenticated/-components/coach-sidebar'
 import { OfflineIndicator } from './_authenticated/-components/offline-indicator'
+import { UpgradeModal } from './_authenticated/-components/upgrade-modal'
 
 function AuthErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
@@ -141,6 +142,8 @@ function AuthenticatedLayout() {
           )}
         </button>
       )}
+
+      <UpgradeModal />
     </div>
   )
 }

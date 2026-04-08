@@ -9,6 +9,7 @@ import {
   listThreads,
   saveCoachExchange,
 } from '~/server/coach'
+import { openUpgradeModal } from '~/lib/upgrade-gate'
 
 export interface CoachMessage {
   id: string
@@ -263,6 +264,7 @@ export function useCoach(currentPage?: string) {
     const isFirstMessage = messageCountRef.current === 0
     let fullResponse = ''
     let contextSnapshot: Record<string, unknown> | undefined
+    let limitReached = false
 
     try {
       abortRef.current = new AbortController()
@@ -308,12 +310,29 @@ export function useCoach(currentPage?: string) {
           if (!line) continue
 
           const payload = JSON.parse(line.slice(6)) as {
-            type: 'text' | 'done' | 'error' | 'ping'
+            type: 'text' | 'done' | 'error' | 'ping' | 'limit_reached'
             content?: string
             contextSnapshot?: Record<string, unknown>
+            feature?: string
+            limit?: number
+            used?: number
+            resetAt?: string
+            upgradeUrl?: string
           }
 
           if (payload.type === 'ping') continue
+
+          if (payload.type === 'limit_reached') {
+            limitReached = true
+            openUpgradeModal({
+              feature: payload.feature ?? 'coach_message',
+              limit: payload.limit,
+              used: payload.used,
+              resetAt: payload.resetAt,
+              upgradeUrl: payload.upgradeUrl,
+            })
+            break
+          }
 
           if (payload.type === 'error') {
             throw new Error(payload.content || 'Coach request failed')
@@ -334,6 +353,15 @@ export function useCoach(currentPage?: string) {
           fullResponse = payload.content ?? fullResponse
           contextSnapshot = payload.contextSnapshot
         }
+
+        if (limitReached) {
+          break
+        }
+      }
+
+      if (limitReached) {
+        setMessages((prev) => prev.filter((message) => message.id !== assistantId))
+        return
       }
 
       setMessages((prev) =>

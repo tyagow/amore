@@ -20,8 +20,15 @@ import { InstallBanner } from './-components/install-banner'
 import { PushOptIn } from './-components/push-opt-in'
 import { DailyCheckinCard } from './-components/daily-checkin-card'
 import { getDailyCheckin } from '~/server/checkin'
+import {
+  isUpgradeGateDetail,
+  openUpgradeModal,
+} from '~/lib/upgrade-gate'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    upgraded: search.upgraded === 'true',
+  }),
   loader: async ({ context }) => {
     if (!context.hasCouple) {
       const pendingRequests = await getPendingRequests()
@@ -200,13 +207,24 @@ function SoloOnboarding({ pendingRequests }: {
 
 function DashboardPage() {
   const data = Route.useLoaderData()
+  const { upgraded } = Route.useSearch()
 
   if (!data.hasCouple) {
     const { pendingRequests } = data as Extract<typeof data, { hasCouple: false }>
-    return <SoloOnboarding pendingRequests={pendingRequests} />
+    return (
+      <>
+        {upgraded && <UpgradeSuccessBanner />}
+        <SoloOnboarding pendingRequests={pendingRequests} />
+      </>
+    )
   }
 
-  return <CouplesDashboard data={data as Extract<typeof data, { hasCouple: true }>} />
+  return (
+    <>
+      {upgraded && <UpgradeSuccessBanner />}
+      <CouplesDashboard data={data as Extract<typeof data, { hasCouple: true }>} />
+    </>
+  )
 }
 
 function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useLoaderData>, { hasCouple: true }> }) {
@@ -228,7 +246,12 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
   const handleAnalyze = async () => {
     setAnalyzing(true)
     try {
-      await triggerAnalysis()
+      const result = await triggerAnalysis()
+      if (isUpgradeGateDetail(result)) {
+        openUpgradeModal(result)
+        setAnalyzing(false)
+        return
+      }
       // Poll for completion — analysis takes ~10-30s
       setTimeout(() => router.invalidate(), 15000)
       setTimeout(() => router.invalidate(), 30000)
@@ -293,6 +316,16 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
           }}
         />
       )}
+    </div>
+  )
+}
+
+function UpgradeSuccessBanner() {
+  return (
+    <div className="mx-auto mt-6 max-w-5xl px-6">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
+        Premium checkout completed. If your upgraded access has not appeared yet, give the billing webhook a moment and refresh.
+      </div>
     </div>
   )
 }
