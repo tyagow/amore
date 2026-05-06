@@ -30,6 +30,7 @@ import { RelationshipPracticeDeck } from './-components/relationship-practice-de
 import { RepairChoiceCard } from './-components/repair-choice-card'
 import { WeeklyResetRitual } from './-components/weekly-reset-ritual'
 import { PersonalizedRitualCard } from './-components/personalized-ritual-card'
+import { WeeklyRelationshipReportCard } from './-components/weekly-relationship-report-card'
 import {
   selectPersonalizedRitual,
   type RitualHistoryEntry,
@@ -372,6 +373,20 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
         ritual={selectedRitual}
         partnerName={data.partner?.name ?? 'your partner'}
         dailyCheckin={data.dailyCheckin}
+        onOpenCoach={(prompt) => {
+          window.localStorage.setItem('amore-coach-draft', prompt)
+          window.dispatchEvent(new CustomEvent('amore:open-coach'))
+        }}
+      />
+
+      <WeeklyRelationshipReportCard
+        partnerName={data.partner?.name ?? 'your partner'}
+        healthScore={data.couple.healthScore}
+        messagesSinceAnalysis={data.couple.messagesSinceAnalysis}
+        messageStats={data.messageStats}
+        activeGoalCount={data.activeGoals.length}
+        recentCheckins={data.dailyCheckin.recentCheckins}
+        ritual={selectedRitual}
         onOpenCoach={(prompt) => {
           window.localStorage.setItem('amore-coach-draft', prompt)
           window.dispatchEvent(new CustomEvent('amore:open-coach'))
