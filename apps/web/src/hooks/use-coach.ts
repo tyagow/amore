@@ -11,6 +11,10 @@ import {
 } from '~/server/coach'
 import { openUpgradeModal } from '~/lib/upgrade-gate'
 import { useI18n } from '~/lib/i18n'
+import {
+  getCoachThreadVisibility,
+  type CoachThreadVisibility,
+} from '~/server/coach-authorization'
 
 export interface CoachMessage {
   id: string
@@ -23,6 +27,7 @@ export interface CoachMessage {
 export interface CoachThread {
   id: string
   title: string | null
+  visibility: CoachThreadVisibility
   createdAt: string
   updatedAt: string
 }
@@ -49,12 +54,18 @@ function toIsoString(value: unknown): string {
 function normalizeThread(thread: {
   id: string
   title: string | null
+  coupleId?: string | null
+  userId?: string | null
   createdAt: Date | string
   updatedAt: Date | string
 }): CoachThread {
   return {
     id: thread.id,
     title: thread.title,
+    visibility: getCoachThreadVisibility({
+      coupleId: thread.coupleId ?? null,
+      userId: thread.userId ?? null,
+    }),
     createdAt: toIsoString(thread.createdAt),
     updatedAt: toIsoString(thread.updatedAt),
   }
@@ -108,6 +119,8 @@ export function useCoach(currentPage?: string) {
     const result = await listThreads() as Array<{
       id: string
       title: string | null
+      coupleId?: string | null
+      userId?: string | null
       createdAt: Date | string
       updatedAt: Date | string
     }>
@@ -152,17 +165,22 @@ export function useCoach(currentPage?: string) {
     }
   }, [currentPage, locale])
 
-  const openThread = useCallback(async (threadId?: string) => {
+  const openThread = useCallback(async (
+    threadId?: string,
+    visibility: CoachThreadVisibility = 'private',
+  ) => {
     setIsLoading(true)
     setError(null)
 
     try {
       const thread = normalizeThread(
         await getOrCreateThread({
-          data: threadId ? { threadId } : {},
+          data: threadId ? { threadId } : { visibility },
         }) as {
           id: string
           title: string | null
+          coupleId?: string | null
+          userId?: string | null
           createdAt: Date | string
           updatedAt: Date | string
         },
@@ -197,8 +215,8 @@ export function useCoach(currentPage?: string) {
     }
   }, [loadStarter, t])
 
-  const newThread = useCallback(async () => {
-    const thread = await openThread()
+  const newThread = useCallback(async (visibility: CoachThreadVisibility = 'private') => {
+    const thread = await openThread(undefined, visibility)
     await loadThreads()
     return thread
   }, [loadThreads, openThread])

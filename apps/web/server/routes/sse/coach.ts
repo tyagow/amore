@@ -2,7 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { auth } from '../../../src/lib/auth'
 import { db } from '@amore-couples/db'
 import { coachMessages, coachThreads, couples } from '@amore-couples/db/schema'
-import { and, asc, eq, isNull, or } from 'drizzle-orm'
+import { and, asc, eq, or } from 'drizzle-orm'
 import {
   classifyIntent,
   streamCoachResponse,
@@ -15,6 +15,7 @@ import {
   checkFeatureAccess,
   incrementUsage,
 } from '../../../src/server/plan'
+import { canAccessCoachThread } from '../../../src/server/coach-authorization'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -53,25 +54,15 @@ export default defineEventHandler(async (event) => {
     ),
   })
 
-  // Verify thread ownership — either by couple or by userId
-  const thread = couple
-    ? await db.query.coachThreads.findFirst({
-        where: and(
-          eq(coachThreads.id, threadId),
-          or(
-            eq(coachThreads.coupleId, couple.id),
-            and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
-          ),
-        ),
-      })
-    : await db.query.coachThreads.findFirst({
-        where: and(
-          eq(coachThreads.id, threadId),
-          eq(coachThreads.userId, session.user.id),
-        ),
-      })
+  // Private threads are user-owned. Shared threads are couple-owned and require explicit shared mode.
+  const thread = await db.query.coachThreads.findFirst({
+    where: eq(coachThreads.id, threadId),
+  })
 
-  if (!thread) {
+  if (!canAccessCoachThread(thread, {
+    userId: session.user.id,
+    coupleId: couple?.id ?? null,
+  })) {
     throw createError({ statusCode: 404, statusMessage: 'Thread not found' })
   }
 

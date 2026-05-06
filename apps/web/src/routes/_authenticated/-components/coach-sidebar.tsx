@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCoach } from '~/hooks/use-coach'
 import { useI18n, type Locale } from '~/lib/i18n'
+import type { CoachThreadVisibility } from '~/server/coach-authorization'
 
 function formatThreadDate(value: string, locale: Locale): string {
   const date = new Date(value)
@@ -50,7 +51,12 @@ function ThreadList({
   onDelete,
   onNew,
 }: {
-  threads: Array<{ id: string; title: string | null; updatedAt: string }>
+  threads: Array<{
+    id: string
+    title: string | null
+    visibility: CoachThreadVisibility
+    updatedAt: string
+  }>
   activeId: string | null
   onSelect: (threadId: string) => void
   onDelete: (threadId: string) => void
@@ -89,8 +95,16 @@ function ThreadList({
                   <div className="truncate text-sm font-medium text-warm-800">
                     {thread.title || t('Untitled conversation')}
                   </div>
-                  <div className="mt-1 text-xs text-warm-400">
-                    {t('Updated')} {formatThreadDate(thread.updatedAt, locale)}
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warm-400">
+                    <span>{t('Updated')} {formatThreadDate(thread.updatedAt, locale)}</span>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                      thread.visibility === 'shared'
+                        ? 'bg-sage-50 text-sage-700'
+                        : 'bg-warm-100 text-warm-500'
+                    }`}
+                    >
+                      {thread.visibility === 'shared' ? t('Shared') : t('Private')}
+                    </span>
                   </div>
                 </button>
                 <button
@@ -245,7 +259,7 @@ function QuickCoachPrompts({
 }) {
   const { locale, t } = useI18n()
   return (
-    <div className="px-3 pb-3">
+    <div className="shrink-0 px-3 pb-3 pt-3">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warm-400">
         {t('Start with a hard thing')}
       </p>
@@ -295,6 +309,7 @@ export function CoachSidebar({
 
   const [input, setInput] = useState('')
   const [showThreads, setShowThreads] = useState(false)
+  const [nextVisibility, setNextVisibility] = useState<CoachThreadVisibility>('private')
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -359,8 +374,8 @@ export function CoachSidebar({
     await removeThread(threadId)
   }
 
-  const handleNewThread = async () => {
-    await newThread()
+  const handleNewThread = async (visibility: CoachThreadVisibility = nextVisibility) => {
+    await newThread(visibility)
     setShowThreads(false)
   }
 
@@ -385,8 +400,8 @@ export function CoachSidebar({
     : t('Relationship')
 
   return (
-    <div className="flex h-full flex-col border-l border-warm-200 bg-[radial-gradient(circle_at_top,_rgba(255,241,232,0.9),_rgba(251,245,240,1)_45%,_rgba(246,239,232,1)_100%)]">
-      <div className="border-b border-warm-200 bg-white/90 px-4 py-3 backdrop-blur">
+    <div className="flex h-full min-h-0 flex-col border-l border-warm-200 bg-[radial-gradient(circle_at_top,_rgb(255,241,232),_rgb(251,245,240)_45%,_rgb(246,239,232)_100%)]">
+      <div className="shrink-0 border-b border-warm-200 bg-white/90 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -440,6 +455,11 @@ export function CoachSidebar({
               <span className="rounded-full border border-coral-200 bg-coral-50 px-2.5 py-1 text-[11px] font-medium text-coral-700">
                 {t('Context')}: {pageLabel}
               </span>
+              {activeThread && (
+                <span className="rounded-full border border-warm-200 bg-white px-2.5 py-1 text-[11px] font-medium text-warm-500">
+                  {activeThread.visibility === 'shared' ? t('Shared') : t('Private')}
+                </span>
+              )}
               {activeThread?.updatedAt && (
                 <span className="text-[11px] text-warm-400">
                   {t('Updated')} {formatThreadDate(activeThread.updatedAt, locale)}
@@ -447,7 +467,9 @@ export function CoachSidebar({
               )}
             </div>
             <p className="text-[11px] leading-4 text-warm-400">
-              {t('Private coach thread. Not therapy, emergency help, or abuse mediation.')}
+              {activeThread?.visibility === 'shared'
+                ? t('Shared coach thread. Both partners can use this thread. Not therapy, emergency help, or abuse mediation.')
+                : t('Private coach thread. Not shared with your partner unless you explicitly start a shared thread. Not therapy, emergency help, or abuse mediation.')}
             </p>
           </div>
         )}
@@ -459,7 +481,7 @@ export function CoachSidebar({
           activeId={activeThread?.id ?? null}
           onSelect={(threadId) => void handleThreadSelect(threadId)}
           onDelete={(threadId) => void handleThreadDelete(threadId)}
-          onNew={() => void handleNewThread()}
+          onNew={() => void handleNewThread('private')}
         />
       ) : (
         <>
@@ -484,7 +506,36 @@ export function CoachSidebar({
             }}
           />
 
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
+          <div className="shrink-0 px-3 pb-2">
+            <div className="rounded-2xl border border-warm-200 bg-white p-2 shadow-sm">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warm-400">
+                {t('New thread visibility')}
+              </p>
+              <div className="grid grid-cols-2 gap-1">
+                {(['private', 'shared'] as const).map((visibility) => (
+                  <button
+                    key={visibility}
+                    type="button"
+                    onClick={() => setNextVisibility(visibility)}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                      nextVisibility === visibility
+                        ? 'bg-coral-500 text-white'
+                        : 'text-warm-600 hover:bg-warm-50'
+                    }`}
+                  >
+                    {visibility === 'shared' ? t('Shared') : t('Private')}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] leading-4 text-warm-400">
+                {nextVisibility === 'shared'
+                  ? t('Shared mode is explicit: both partners can access the thread. Do not include private import or coach details unless you want them shared.')
+                  : t('Private mode is only for you. Partner-visible summaries require an explicit shared thread.')}
+              </p>
+            </div>
+          </div>
+
+          <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-6 pt-4">
             {isLoading ? (
               <div className="flex h-40 items-center justify-center">
                 <div className="h-7 w-7 animate-spin rounded-full border-2 border-coral-200 border-t-coral-500" />
@@ -525,7 +576,7 @@ export function CoachSidebar({
             )}
           </div>
 
-          <div className="border-t border-warm-200/80 bg-white/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-sm">
+          <div className="shrink-0 border-t border-warm-200/80 bg-white/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-sm">
             <div className="flex items-end gap-1.5 rounded-2xl border border-warm-200/60 bg-white px-3 py-1.5 shadow-sm transition-colors focus-within:border-coral-300 focus-within:ring-1 focus-within:ring-coral-300/20">
               <textarea
                 ref={inputRef}

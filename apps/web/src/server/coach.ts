@@ -17,7 +17,12 @@ import {
   or,
   isNull,
 } from 'drizzle-orm'
-import { optionalCouple, requireAuth } from './require-couple'
+import { optionalCouple } from './require-couple'
+import {
+  canAccessCoachThread,
+  getCoachThreadVisibility,
+  type CoachThreadVisibility,
+} from './coach-authorization'
 import {
   extractCoachMemory,
   generateThreadTitle,
@@ -25,26 +30,22 @@ import {
 
 const threadInputSchema = z.object({
   threadId: z.string().min(1).optional(),
+  visibility: z.enum(['private', 'shared']).default('private').optional(),
 })
 
 const localeSchema = z.enum(['en', 'pt-BR']).default('en')
 
-/** Shared thread ownership check — verifies the thread belongs to the user's couple or to the user directly. */
-async function findOwnedThread(threadId: string, userId: string, coupleId: string | null) {
-  return db.query.coachThreads.findFirst({
-    where: coupleId
-      ? and(
-          eq(coachThreads.id, threadId),
-          or(
-            eq(coachThreads.coupleId, coupleId),
-            and(eq(coachThreads.userId, userId), isNull(coachThreads.coupleId)),
-          ),
-        )
-      : and(
-          eq(coachThreads.id, threadId),
-          eq(coachThreads.userId, userId),
-        ),
+/** Shared thread access check: private threads are user-owned; shared threads are couple-owned. */
+async function findAccessibleThread(threadId: string, userId: string, coupleId: string | null) {
+  const thread = await db.query.coachThreads.findFirst({
+    where: eq(coachThreads.id, threadId),
   })
+
+  if (!canAccessCoachThread(thread, { userId, coupleId })) {
+    return null
+  }
+
+  return thread
 }
 
 const contextSnapshotSchema = z.record(z.string(), z.unknown())
@@ -55,17 +56,20 @@ export const getOrCreateThread = createServerFn({ method: 'POST' })
     const { session, couple } = await optionalCouple()
 
     if (data.threadId) {
-      const existing = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
+      const existing = await findAccessibleThread(data.threadId, session.user.id, couple?.id ?? null)
       if (!existing) {
         throw new Error('Thread not found')
       }
       return existing
     }
 
-    // Create new thread
+    const visibility: CoachThreadVisibility = data.visibility ?? 'private'
+    const canCreateShared = visibility === 'shared' && couple?.status === 'active'
+
+    // Private is the default. Shared mode must be explicitly requested and requires an active couple.
     const [thread] = await db.insert(coachThreads).values({
-      coupleId: couple?.id ?? null,
-      userId: session.user.id,
+      coupleId: canCreateShared ? couple.id : null,
+      userId: canCreateShared ? null : session.user.id,
     }).returning()
 
     return thread
@@ -79,8 +83,8 @@ export const listThreads = createServerFn({ method: 'GET' }).handler(
       // Return both couple threads and solo threads for this user
       return db.query.coachThreads.findMany({
         where: or(
-          eq(coachThreads.coupleId, couple.id),
-          and(eq(coachThreads.userId, session.user.id), isNull(coachThreads.coupleId)),
+          and(eq(coachThreads.coupleId, couple.id), isNull(coachThreads.userId)),
+          eq(coachThreads.userId, session.user.id),
         ),
         orderBy: [desc(coachThreads.updatedAt)],
         limit: 50,
@@ -104,7 +108,7 @@ export const getThreadMessages = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const { session, couple } = await optionalCouple()
 
-    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
+    const thread = await findAccessibleThread(data.threadId, session.user.id, couple?.id ?? null)
     if (!thread) {
       throw new Error('Thread not found')
     }
@@ -127,7 +131,7 @@ export const deleteThread = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { session, couple } = await optionalCouple()
 
-    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
+    const thread = await findAccessibleThread(data.threadId, session.user.id, couple?.id ?? null)
     if (thread) {
       await db.delete(coachThreads).where(eq(coachThreads.id, data.threadId))
     }
@@ -147,7 +151,7 @@ export const saveCoachExchange = createServerFn({ method: 'POST' })
     const { session, couple } = await optionalCouple()
 
     // Verify thread ownership
-    const thread = await findOwnedThread(data.threadId, session.user.id, couple?.id ?? null)
+    const thread = await findAccessibleThread(data.threadId, session.user.id, couple?.id ?? null)
     if (!thread) {
       throw new Error('Thread not found')
     }
@@ -180,8 +184,8 @@ export const saveCoachExchange = createServerFn({ method: 'POST' })
         .where(eq(coachThreads.id, data.threadId))
     })
 
-    // Extract memory — only for couple threads
-    if (couple && thread.coupleId) {
+    // Extract shared memory only from explicitly shared coach threads.
+    if (couple && getCoachThreadVisibility(thread) === 'shared') {
       void extractCoachMemory(data.userMessage, data.assistantMessage)
         .then(async (memories) => {
           if (memories.length === 0) return
