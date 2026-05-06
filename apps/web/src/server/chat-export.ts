@@ -17,6 +17,7 @@ import type { Message } from '@amore-couples/types'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_MESSAGES = 50_000
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
 
 /**
  * Upload a WhatsApp chat export, parse it, create a solo couple if needed,
@@ -27,6 +28,7 @@ export const uploadChatExport = createServerFn({ method: 'POST' })
     fileContent: z.string().max(MAX_FILE_SIZE, 'File too large (max 5MB)'),
     filename: z.string().min(1).max(255),
     userSenderName: z.string().min(1).max(255),
+    locale: localeSchema,
   }))
   .handler(async ({ data }) => {
     const session = await requireAuth()
@@ -142,6 +144,9 @@ export const uploadChatExport = createServerFn({ method: 'POST' })
         analysisMessages,
         couple.id,
         data.userSenderName,
+        undefined,
+        undefined,
+        data.locale,
       )
 
       // Persist analysis results

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '~/lib/i18n'
 
 interface CoachingTip {
   category: string
@@ -27,6 +28,7 @@ const MOOD_LABEL: Record<string, string> = {
 }
 
 export function CoachingCard({ coaching }: CoachingCardProps) {
+  const { t } = useI18n()
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
   const visible = coaching.filter((c) => !dismissed.has(c.id))
@@ -36,7 +38,7 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
   // Show the most recent coaching insight
   const latest = visible[0]
   const { tips = [], alertPartnerName, moodLevel, moodNote } = latest.content ?? {}
-  const moodDescription = MOOD_LABEL[moodLevel] ?? `feeling ${moodLevel}`
+  const moodDescription = t(MOOD_LABEL[moodLevel] ?? `feeling ${moodLevel}`)
 
   return (
     <div className="bg-amber-50 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 mb-6">
@@ -50,10 +52,10 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-warm-800">
-              {alertPartnerName} might need some support right now
+              {t('{name} might need some support right now').replace('{name}', alertPartnerName)}
             </h3>
             <p className="text-xs text-warm-500 mt-0.5">
-              They shared that they&apos;re {moodDescription}
+              {t("They shared that they're")} {moodDescription}
               {moodNote ? ` — "${moodNote}"` : ''}
             </p>
           </div>
@@ -63,7 +65,7 @@ export function CoachingCard({ coaching }: CoachingCardProps) {
             setDismissed((prev) => new Set([...prev, latest.id]))
           }
           className="text-warm-400 hover:text-warm-600 transition-colors p-1 -mt-1 -mr-1"
-          aria-label="Dismiss coaching tips"
+          aria-label={t('Dismiss coaching tips')}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

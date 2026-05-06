@@ -1,6 +1,7 @@
 import { analyzeConversation } from './analyze'
 import { extractEntities } from './extract'
 import { generateCoachingTips } from './coach'
+import { localized, type AILocale } from './locale'
 import type { Message, InsightType, User } from '@amore-couples/types'
 
 export interface InsightRow {
@@ -33,6 +34,7 @@ export function detectNudgeTriggers(
   currentScore: number,
   previousScore: number | null,
   insights: Array<{ type: string }>,
+  locale: AILocale = 'en',
 ): NudgeTrigger[] {
   const nudges: NudgeTrigger[] = []
 
@@ -40,21 +42,33 @@ export function detectNudgeTriggers(
     const drop = previousScore - currentScore
     nudges.push({
       trigger: 'score_drop',
-      message: `Your relationship health dropped ${drop} points to ${currentScore}. Want to talk through what might be driving it?`,
+      message: localized(
+        locale,
+        `Your relationship health dropped ${drop} points to ${currentScore}. Want to talk through what might be driving it?`,
+        `A saude do relacionamento caiu ${drop} pontos para ${currentScore}. Quer conversar sobre o que pode estar causando isso?`,
+      ),
     })
   }
 
   if (insights.some((insight) => insight.type === 'conflict_alert')) {
     nudges.push({
       trigger: 'conflict_alert',
-      message: 'I noticed some tension in your recent conversations. Want help unpacking what happened?',
+      message: localized(
+        locale,
+        'I noticed some tension in your recent conversations. Want help unpacking what happened?',
+        'Percebi alguma tensao nas conversas recentes. Quer ajuda para entender o que aconteceu?',
+      ),
     })
   }
 
   if (previousScore != null && currentScore >= 80 && previousScore < 80) {
     nudges.push({
       trigger: 'milestone',
-      message: `Your relationship health hit ${currentScore}. Want to capture what is working so you can keep it going?`,
+      message: localized(
+        locale,
+        `Your relationship health hit ${currentScore}. Want to capture what is working so you can keep it going?`,
+        `A saude do relacionamento chegou a ${currentScore}. Quer registrar o que esta funcionando para manter esse ritmo?`,
+      ),
     })
   }
 
@@ -67,14 +81,15 @@ export async function runAnalysisPipeline(
   userSenderName = 'You',
   userA?: Pick<User, 'name'> | null,
   userB?: Pick<User, 'name'> | null,
+  locale: AILocale = 'en',
 ): Promise<AnalysisOutput> {
   const [analysis, entities] = await Promise.all([
-    analyzeConversation(messages, userSenderName),
-    extractEntities(messages),
+    analyzeConversation(messages, userSenderName, locale),
+    extractEntities(messages, locale),
   ])
 
   const { healthScore, summary, patterns } = analysis
-  const tips = await generateCoachingTips(summary, healthScore, userA, userB)
+  const tips = await generateCoachingTips(summary, healthScore, userA, userB, locale)
 
   const insightRows: InsightRow[] = []
 
@@ -108,7 +123,11 @@ export async function runAnalysisPipeline(
       type: 'conflict_alert',
       content: {
         score: healthScore,
-        message: 'Couple health is low. Consider having an open conversation about how you both are feeling.',
+        message: localized(
+          locale,
+          'Couple health is low. Consider having an open conversation about how you both are feeling.',
+          'A saude do relacionamento esta baixa. Considerem ter uma conversa aberta sobre como voces dois estao se sentindo.',
+        ),
       },
       severity: 'warning',
     })
@@ -120,8 +139,12 @@ export async function runAnalysisPipeline(
       coupleId,
       type: 'goal_suggestion',
       content: {
-        title: 'Strengthen your communication',
-        description: `Your health score is ${healthScore}/100. Try setting aside dedicated time each day to check in with each other.`,
+        title: localized(locale, 'Strengthen your communication', 'Fortalecer a comunicacao'),
+        description: localized(
+          locale,
+          `Your health score is ${healthScore}/100. Try setting aside dedicated time each day to check in with each other.`,
+          `A pontuacao de saude esta em ${healthScore}/100. Tentem separar um momento dedicado por dia para se checarem.`,
+        ),
       },
       severity: null,
     })

@@ -27,6 +27,8 @@ const threadInputSchema = z.object({
   threadId: z.string().min(1).optional(),
 })
 
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
+
 /** Shared thread ownership check — verifies the thread belongs to the user's couple or to the user directly. */
 async function findOwnedThread(threadId: string, userId: string, coupleId: string | null) {
   return db.query.coachThreads.findFirst({
@@ -241,19 +243,30 @@ export const dismissNudge = createServerFn({ method: 'POST' })
   })
 
 export const getCoachStarter = createServerFn({ method: 'GET' })
-  .handler(async () => {
+  .inputValidator(z.object({ locale: localeSchema }).optional())
+  .handler(async ({ data }) => {
     const { session, couple } = await optionalCouple()
+    const locale = data?.locale ?? 'en'
 
     // Solo user — return generic solo starters
     if (!couple) {
       return {
-        insight: "Welcome! I'm your relationship coach. I can help you reflect on your relationships, communication patterns, and emotional well-being — even before connecting with a partner.",
-        suggestions: [
-          'What makes a healthy relationship?',
-          'Help me communicate better',
-          'I want to understand my attachment style',
-          'How can I prepare for a difficult conversation?',
-        ],
+        insight: locale === 'pt-BR'
+          ? 'Boas-vindas. Sou seu coach de relacionamento. Posso ajudar voce a refletir sobre relacionamentos, padroes de comunicacao e bem-estar emocional antes mesmo de conectar uma parceria.'
+          : "Welcome! I'm your relationship coach. I can help you reflect on your relationships, communication patterns, and emotional well-being — even before connecting with a partner.",
+        suggestions: locale === 'pt-BR'
+          ? [
+              'O que faz um relacionamento saudavel?',
+              'Me ajude a comunicar melhor',
+              'Quero entender meu estilo de apego',
+              'Como me preparo para uma conversa dificil?',
+            ]
+          : [
+              'What makes a healthy relationship?',
+              'Help me communicate better',
+              'I want to understand my attachment style',
+              'How can I prepare for a difficult conversation?',
+            ],
       }
     }
 
@@ -292,5 +305,5 @@ export const getCoachStarter = createServerFn({ method: 'GET' })
     }
 
     const { generateCoachStarter } = await import('@amore-couples/ai')
-    return generateCoachStarter(formatted, partnerName)
+    return generateCoachStarter(formatted, partnerName, locale)
   })

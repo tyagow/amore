@@ -1,6 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChatMessage } from '~/types/chat'
 import { MediaLightbox } from './media-lightbox'
+import {
+  formatAudioTime,
+  getAudioMediaUrl,
+  isPlayableAudioMessage,
+} from './audio-message'
 
 function SpinnerIcon() {
   return (
@@ -96,6 +101,127 @@ function getMediaConfig(mediaType?: string | null) {
   }
 }
 
+function VoiceMessagePlayer({
+  message,
+  isFromMe,
+}: {
+  message: ChatMessage
+  isFromMe: boolean
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioUrl = getAudioMediaUrl(message)
+  const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateDuration = () => setDuration(audio.duration)
+    const markPaused = () => setIsPlaying(false)
+
+    audio.addEventListener('timeupdate', updateTime)
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('durationchange', updateDuration)
+    audio.addEventListener('pause', markPaused)
+    audio.addEventListener('ended', markPaused)
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime)
+      audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('durationchange', updateDuration)
+      audio.removeEventListener('pause', markPaused)
+      audio.removeEventListener('ended', markPaused)
+    }
+  }, [audioUrl])
+
+  const togglePlayback = async () => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+      return
+    }
+
+    try {
+      await audio.play()
+      setIsPlaying(true)
+    } catch {
+      setIsPlaying(false)
+    }
+  }
+
+  if (!audioUrl) {
+    return (
+      <div className="flex items-center gap-2 py-1">
+        {getMediaConfig('audio').icon}
+        <span className="text-xs font-medium text-warm-500">Audio unavailable</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-w-[230px] max-w-[320px] py-1">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={togglePlayback}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+            isFromMe
+              ? 'bg-coral-500 text-white hover:bg-coral-600'
+              : 'bg-warm-900 text-white hover:bg-warm-800'
+          }`}
+          title={isPlaying ? 'Pause voice message' : 'Play voice message'}
+          aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+        >
+          {isPlaying ? (
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M5 3.5A1.5 1.5 0 0 0 3.5 5v6A1.5 1.5 0 0 0 5 12.5 1.5 1.5 0 0 0 6.5 11V5A1.5 1.5 0 0 0 5 3.5Zm6 0A1.5 1.5 0 0 0 9.5 5v6a1.5 1.5 0 0 0 3 0V5A1.5 1.5 0 0 0 11 3.5Z" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4 translate-x-px" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4.5 3.7v8.6c0 .7.76 1.13 1.36.76l6.64-4.3a.9.9 0 0 0 0-1.52L5.86 2.94A.9.9 0 0 0 4.5 3.7Z" />
+            </svg>
+          )}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex h-7 items-center gap-0.5" aria-hidden="true">
+            {Array.from({ length: 24 }).map((_, index) => {
+              const height = 7 + ((index * 11) % 18)
+              const played = index / 24 <= progress
+              return (
+                <span
+                  // Static decorative waveform; index is stable for this fixed-length shape.
+                  key={index}
+                  className={`w-0.5 rounded-full ${
+                    played
+                      ? isFromMe
+                        ? 'bg-coral-500'
+                        : 'bg-warm-700'
+                      : 'bg-warm-300'
+                  }`}
+                  style={{ height }}
+                />
+              )
+            })}
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-warm-500">
+            <span>Voice message</span>
+            <span>{formatAudioTime(duration || currentTime)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MessageBubble({ message }: { message: ChatMessage }) {
   const [showLightbox, setShowLightbox] = useState(false)
 
@@ -113,6 +239,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
   if (message.isMedia) {
     const mediaConfig = getMediaConfig(message.mediaType)
+    const hasPlayableAudio = isPlayableAudioMessage(message)
     const hasFullMedia = message.waMessageId && (message.mediaType === 'image' || message.mediaType === 'video' || message.mediaType === 'sticker')
 
     return (
@@ -123,7 +250,9 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
               ? 'bg-coral-50 text-warm-900 rounded-br-md'
               : 'bg-warm-100 text-warm-900 rounded-bl-md'
           }`}>
-            {message.thumbnail ? (
+            {hasPlayableAudio ? (
+              <VoiceMessagePlayer message={message} isFromMe={isFromMe} />
+            ) : message.thumbnail ? (
               <img
                 src={`data:image/jpeg;base64,${message.thumbnail}`}
                 className={`rounded-lg max-w-full ${hasFullMedia ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}

@@ -4,6 +4,7 @@ import {
   updateNotificationPreferences,
 } from '~/server/notification-preferences'
 import { getSubscriptionStatus, unsubscribePush } from '~/server/push'
+import { useI18n } from '~/lib/i18n'
 
 interface Prefs {
   moodAlerts: boolean
@@ -29,6 +30,7 @@ const NOTIFICATION_TYPES = [
 ]
 
 export function NotificationSettings() {
+  const { t } = useI18n()
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -90,17 +92,17 @@ export function NotificationSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-base text-warm-800 mb-1">Notifications</h2>
-        <p className="text-sm text-warm-500">Choose what you want to be notified about</p>
+        <h2 className="font-display text-base text-warm-800 mb-1">{t('Notifications')}</h2>
+        <p className="text-sm text-warm-500">{t('Choose what you want to be notified about')}</p>
       </div>
 
       {/* Push subscription status */}
       <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-warm-900">Push notifications</h3>
+            <h3 className="text-sm font-semibold text-warm-900">{t('Push notifications')}</h3>
             <p className="text-xs text-warm-500 mt-0.5">
-              {subscribed ? 'This device is receiving push notifications' : 'Not enabled on this device'}
+              {subscribed ? t('This device is receiving push notifications') : t('Not enabled on this device')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -109,7 +111,7 @@ export function NotificationSettings() {
                 onClick={handleRemoveSubscription}
                 className="text-xs text-warm-500 hover:text-red-500 transition-colors"
               >
-                Disable
+                {t('Disable')}
               </button>
             )}
             <Toggle
@@ -123,12 +125,12 @@ export function NotificationSettings() {
 
       {/* Per-type toggles */}
       <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-warm-900">Notification types</h3>
+        <h3 className="text-sm font-semibold text-warm-900">{t('Notification types')}</h3>
         {NOTIFICATION_TYPES.map(({ key, label, desc }) => (
           <div key={key} className="flex items-center justify-between py-1">
             <div>
-              <p className="text-sm text-warm-900">{label}</p>
-              <p className="text-xs text-warm-500">{desc}</p>
+              <p className="text-sm text-warm-900">{t(label)}</p>
+              <p className="text-xs text-warm-500">{t(desc)}</p>
             </div>
             <Toggle
               checked={prefs[key]}
@@ -141,9 +143,9 @@ export function NotificationSettings() {
 
       {/* Quiet hours */}
       <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
-        <h3 className="text-sm font-semibold text-warm-900 mb-3">Quiet hours</h3>
+        <h3 className="text-sm font-semibold text-warm-900 mb-3">{t('Quiet hours')}</h3>
         <p className="text-xs text-warm-500 mb-4">
-          Pause push notifications during these hours
+          {t('Pause push notifications during these hours')}
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -152,7 +154,7 @@ export function NotificationSettings() {
             onChange={(e) => updatePref('quietStart', e.target.value || null)}
             className="px-3 py-2 border border-warm-300 rounded-lg text-sm text-warm-900 focus:outline-none focus:ring-2 focus:ring-coral-300"
           />
-          <span className="text-sm text-warm-500">to</span>
+          <span className="text-sm text-warm-500">{t('to')}</span>
           <input
             type="time"
             value={prefs.quietEnd ?? ''}
@@ -165,12 +167,12 @@ export function NotificationSettings() {
             onClick={() => updatePref('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone)}
             className="mt-3 text-xs text-coral-500 hover:text-coral-600 transition-colors"
           >
-            Set timezone to {Intl.DateTimeFormat().resolvedOptions().timeZone}
+            {t('Set timezone to')} {Intl.DateTimeFormat().resolvedOptions().timeZone}
           </button>
         )}
         {prefs.timezone && (
           <p className="mt-2 text-xs text-warm-400">
-            Timezone: {prefs.timezone}
+            {t('Timezone:')} {prefs.timezone}
           </p>
         )}
       </div>

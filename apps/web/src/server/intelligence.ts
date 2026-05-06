@@ -16,6 +16,9 @@ import { messages, couples as couplesTable } from '@amore-couples/db/schema'
 import { detectNudgeTriggers, runAnalysisPipeline } from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
 import { checkFeatureAccess, incrementUsage, buildGatedResponse } from './plan'
+import { z } from 'zod'
+
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
 
 /**
  * Unified intelligence data shared across dashboard and chat.
@@ -190,10 +193,12 @@ export const getIntelligence = createServerFn({ method: 'GET' }).handler(
  * Run the analysis pipeline directly against the local DB.
  * No bridge dependency — works in both dev and prod.
  */
-export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
-  async () => {
+export const triggerAnalysis = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ locale: localeSchema }).optional())
+  .handler(async ({ data }) => {
     const { session, couple, getPlan } = await requireCouple()
     const plan = await getPlan()
+    const locale = data?.locale ?? 'en'
 
     // Gate: manual analysis has weekly limit for free users
     if (plan === 'free') {
@@ -256,11 +261,12 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
           createdAt: m.createdAt,
         }))
 
-      const output = await runAnalysisPipeline(parsed, couple.id, undefined, userA, userB)
+      const output = await runAnalysisPipeline(parsed, couple.id, undefined, userA, userB, locale)
       const nudgeTriggers = detectNudgeTriggers(
         output.healthScore,
         previousHealthScore,
         output.insightRows,
+        locale,
       )
 
       // Persist results
@@ -359,5 +365,4 @@ export const triggerAnalysis = createServerFn({ method: 'POST' }).handler(
         error: err instanceof Error ? err.message : 'Failed to run analysis',
       }
     }
-  },
-)
+  })

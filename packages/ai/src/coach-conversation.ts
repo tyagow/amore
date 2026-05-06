@@ -7,6 +7,7 @@ import {
   parseValidatedResponse,
   withRetry,
 } from './config'
+import { getAILocaleInstruction, type AILocale } from './locale'
 
 export interface CoachContext {
   healthScore: number | null
@@ -50,6 +51,12 @@ export interface CoachContext {
 export interface ThreadMessage {
   role: 'user' | 'assistant'
   content: string
+}
+
+export type CoachLocale = AILocale
+
+export function getCoachLocaleInstruction(locale: CoachLocale = 'en'): string {
+  return getAILocaleInstruction(locale).trim()
 }
 
 export type CoachIntent =
@@ -119,7 +126,7 @@ function formatJson(value: unknown): string {
   }
 }
 
-function buildSoloSystemPrompt(currentPage?: string): string {
+function buildSoloSystemPrompt(currentPage?: string, locale: CoachLocale = 'en'): string {
   const parts: string[] = [
     `You are Amore's relationship coach. This user is exploring relationship coaching on their own — they haven't connected a partner yet, so you have no conversation data or couple analytics.
 
@@ -131,6 +138,7 @@ Rules:
 - Keep most responses to 2-4 short paragraphs unless more depth is needed.
 - Never reference couple data, health scores, or partner-specific analysis — you don't have any.
 - You can discuss general relationship topics: attachment styles, communication patterns, conflict resolution, emotional intelligence, love languages, boundaries.`,
+    getCoachLocaleInstruction(locale),
   ]
 
   if (currentPage) {
@@ -151,6 +159,7 @@ Rules:
 function buildSystemPrompt(
   context: Partial<CoachContext>,
   currentPage?: string,
+  locale: CoachLocale = 'en',
 ): string {
   const parts: string[] = [
     `You are Amore's relationship coach. You are direct, grounded, and useful.
@@ -162,6 +171,7 @@ Rules:
 - Ask questions only when missing information blocks a good answer.
 - Keep most responses to 2-4 short paragraphs unless the user clearly needs more depth.
 - If the available data is thin or missing, say that plainly.`,
+    getCoachLocaleInstruction(locale),
   ]
 
   if (currentPage) {
@@ -263,11 +273,12 @@ export async function streamCoachResponse(
   context: Partial<CoachContext>,
   currentPage?: string,
   isSolo?: boolean,
+  locale: CoachLocale = 'en',
 ): Promise<AsyncIterable<string>> {
   const client = getClient()
   const system = isSolo
-    ? buildSoloSystemPrompt(currentPage)
-    : buildSystemPrompt(context, currentPage)
+    ? buildSoloSystemPrompt(currentPage, locale)
+    : buildSystemPrompt(context, currentPage, locale)
 
   const stream = client.messages.stream({
     model: AI_MODEL,
@@ -358,6 +369,7 @@ export interface CoachStarter {
 export async function generateCoachStarter(
   recentMessages: Array<{ sender: string; text: string }>,
   partnerName?: string,
+  locale: CoachLocale = 'en',
 ): Promise<CoachStarter> {
   const client = getClient()
 
@@ -382,6 +394,8 @@ Return a JSON object with:
 
 Examples of good suggestions: "Thank ${name} for the meal prep", "Ask ${name} about the weekend plan", "Check in on how ${name} is feeling", "Discuss the budget with ${name}"
 
+${getCoachLocaleInstruction(locale)}
+
 Return ONLY valid JSON, no markdown.`,
         messages: [
           { role: 'user', content: `Recent messages:\n${formatted}` },
@@ -393,12 +407,20 @@ Return ONLY valid JSON, no markdown.`,
     })
   } catch {
     return {
-      insight: "I can see your recent conversation. Ask me anything about how it's going or what to say next.",
-      suggestions: [
-        'Help me reply thoughtfully',
-        'How is our communication today?',
-        'Suggest something nice to say',
-      ],
+      insight: locale === 'pt-BR'
+        ? 'Consigo ver sua conversa recente. Pergunte qualquer coisa sobre como ela esta indo ou o que dizer agora.'
+        : "I can see your recent conversation. Ask me anything about how it's going or what to say next.",
+      suggestions: locale === 'pt-BR'
+        ? [
+            'Me ajude a responder com cuidado',
+            'Como esta nossa comunicacao hoje?',
+            'Sugira algo carinhoso para dizer',
+          ]
+        : [
+            'Help me reply thoughtfully',
+            'How is our communication today?',
+            'Suggest something nice to say',
+          ],
     }
   }
 }

@@ -1,4 +1,13 @@
+import { Link } from '@tanstack/react-router'
 import type { getInsightsData } from '~/server/insights'
+import {
+  buildBalanceChatDraft,
+  buildConversationGoalDraft,
+  getBestConversationWindow,
+  getConversationBalance,
+} from './communication-actions'
+import { useI18n } from '~/lib/i18n'
+import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
 
 type InsightsData = Awaited<ReturnType<typeof getInsightsData>>
 
@@ -332,6 +341,66 @@ function MessageLengthStats({
 
 // --- Main Component ---
 
+function ConversationMove({
+  data,
+}: {
+  data: InsightsData
+}) {
+  const { locale, t } = useI18n()
+  const partnerName = data.partner?.name ?? undefined
+  const balance = getConversationBalance(data.senderStats, data.userId)
+  const bestWindow = getBestConversationWindow(data.hourlyActivity)
+  const chatDraft = buildBalanceChatDraft({
+    direction: balance.direction,
+    partnerName,
+  }, locale)
+  const goalDraft = buildConversationGoalDraft({
+    windowLabel: bestWindow?.label ?? null,
+    direction: balance.direction,
+  }, locale)
+  const balanceLabel =
+    balance.direction === 'balanced'
+      ? 'Your message rhythm looks balanced.'
+      : balance.direction === 'user_leads'
+        ? 'You may be carrying more of the conversation.'
+        : `${partnerName || 'Your partner'} may be carrying more of the conversation.`
+  const timeLabel = bestWindow
+    ? `${bestWindow.label} is one of your strongest conversation windows.`
+    : 'Pick one calm 15-minute window this week.'
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-coral-500">
+            Conversation move
+          </p>
+          <h3 className="mt-1 font-display text-lg text-warm-800">{balanceLabel}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-warm-500">
+            {timeLabel} Turn the pattern into one small ask instead of just reading the chart.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            to="/chat"
+            onClick={() => storeChatDraft(chatDraft, locale)}
+            className="rounded-lg bg-coral-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-coral-600"
+          >
+            {t('Open in chat')}
+          </Link>
+          <Link
+            to="/goals"
+            onClick={() => storeGoalDraft(goalDraft, locale)}
+            className="rounded-lg border border-coral-200 bg-white px-3 py-2 text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-50"
+          >
+            {t('Make it a goal')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CommunicationTab({ data }: { data: InsightsData }) {
   const hasSenderStats = data.senderStats.length > 0
   const hasActivity = data.hourlyActivity.length > 0
@@ -369,6 +438,8 @@ export function CommunicationTab({ data }: { data: InsightsData }) {
 
   return (
     <div className="space-y-6">
+      <ConversationMove data={data} />
+
       {/* Initiation Balance */}
       {hasSenderStats && (
         <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">

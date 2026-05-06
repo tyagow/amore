@@ -10,6 +10,7 @@ import {
   isUpgradeGateDetail,
   openUpgradeModal,
 } from '~/lib/upgrade-gate'
+import { useI18n } from '~/lib/i18n'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ interface AISidebarState {
 export interface PartnerProfile {
   loveLanguages?: Array<{ language: string; confidence: number }> | null
   communicationStyle?: Record<string, Record<string, number>> | null
-  interests?: string[] | null
+  interests?: unknown[] | null
 }
 
 export interface InsightRow {
@@ -98,6 +99,7 @@ function checkRateLimit(
 // ── Hook ────────────────────────────────────────────────
 
 export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
+  const { locale, t } = useI18n()
   const [state, setState] = useState<AISidebarState>({
     suggestions: [],
     mood: null,
@@ -231,6 +233,7 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
         const result = await getChatAISuggestions({
           data: {
             messages: recentMessagePayload(messagesRef.current),
+            locale,
           },
         })
         if (isUpgradeGateDetail(result)) {
@@ -251,12 +254,12 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
         }
       } catch (err) {
         if ((err as Error)?.name !== 'AbortError') {
-          setAiError('Failed to load reply suggestions')
+          setAiError(t('Failed to load reply suggestions'))
         }
       }
       setState((prev) => ({ ...prev, suggestionsLoading: false }))
     }, 3000)
-  }, [messages.length, setAiError])
+  }, [messages.length, locale, setAiError])
 
   // Mood/coaching: trigger every 7 new messages, rate-limited 2/min
   useEffect(() => {
@@ -273,6 +276,7 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
     getChatAIMood({
       data: {
         messages: recentMessagePayload(messagesRef.current, 20),
+        locale,
       },
     })
       .then((result: unknown) => {
@@ -296,10 +300,10 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
         }
       })
       .catch(() => {
-        setAiError('Failed to analyze mood')
+        setAiError(t('Failed to analyze mood'))
         setState((prev) => ({ ...prev, moodLoading: false }))
       })
-  }, [messages.length, setAiError])
+  }, [messages.length, locale, setAiError, t])
 
   // Review draft -- manual call, rate-limited 3/hr
   const reviewDraft = useCallback(
@@ -307,7 +311,7 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
       if (!text.trim()) return
 
       if (!checkRateLimit(reviewCallTimesRef.current, 3, 3600000)) {
-        setAiError('Review limit reached. Try again in a few minutes.')
+        setAiError(t('Review limit reached. Try again in a few minutes.'))
         return
       }
       reviewCallTimesRef.current.push(Date.now())
@@ -318,6 +322,7 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
           data: {
             draft: text,
             messages: recentMessagePayload(messagesRef.current, 10),
+            locale,
           },
         })
         if (isUpgradeGateDetail(result)) {
@@ -345,11 +350,11 @@ export function useChatAI(messages: ChatMessage[]): UseChatAIReturn {
           }))
         }
       } catch {
-        setAiError('Failed to review message')
+        setAiError(t('Failed to review message'))
       }
       setState((prev) => ({ ...prev, reviewLoading: false }))
     },
-    [setAiError],
+    [locale, setAiError, t],
   )
 
   const clearReview = useCallback(() => {

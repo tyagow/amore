@@ -3,6 +3,7 @@ export { generateCoachingTips, generateMoodCoaching, type CoachingTip, type Mood
 export * from './coach-conversation'
 export { extractEntities, type ExtractedEntities } from './extract'
 export { AIParseError } from './config'
+export { getAILocaleInstruction, localized, normalizeAILocale, type AILocale } from './locale'
 export { analysisResultSchema, extractedEntitiesSchema, coachingTipsSchema } from './schemas'
 export {
   detectNudgeTriggers,

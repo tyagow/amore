@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useRef, useState } from 'react'
 import { previewChatExport, uploadChatExport } from '~/server/chat-export'
+import { useI18n } from '~/lib/i18n'
 
 export const Route = createFileRoute('/_authenticated/upload')({
   component: UploadPage,
@@ -30,7 +31,7 @@ interface AnalysisResult {
 const MAX_SIZE = 5 * 1024 * 1024
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -39,6 +40,7 @@ function formatDate(iso: string): string {
 
 function UploadPage() {
   const navigate = useNavigate()
+  const { locale, t } = useI18n()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>('select')
@@ -53,7 +55,7 @@ function UploadPage() {
     setError(null)
 
     if (file.size > MAX_SIZE) {
-      setError('File is too large. Maximum size is 5MB.')
+      setError(t('File is too large. Maximum size is 5MB.'))
       return
     }
 
@@ -72,13 +74,13 @@ function UploadPage() {
         )
 
         if (!txtEntry) {
-          setError('No .txt file found inside the zip. Please select the WhatsApp .txt export directly.')
+          setError(t('No .txt file found inside the zip. Please select the WhatsApp .txt export directly.'))
           return
         }
 
         text = new TextDecoder().decode(txtEntry[1])
       } catch {
-        setError('Failed to read the zip file. Please try uploading the .txt file directly.')
+        setError(t('Failed to read the zip file. Please try uploading the .txt file directly.'))
         return
       }
     } else {
@@ -99,12 +101,12 @@ function UploadPage() {
         setSelectedSender(data.senders[0])
         setStep('preview')
       } else {
-        setError('Could not detect conversation participants.')
+        setError(t('Could not detect conversation participants.'))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse the file.')
+      setError(err instanceof Error ? err.message : t('Failed to parse the file.'))
     }
-  }, [])
+  }, [t])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -129,6 +131,7 @@ function UploadPage() {
           fileContent,
           filename,
           userSenderName: selectedSender,
+          locale,
         },
       })
 
@@ -139,7 +142,7 @@ function UploadPage() {
       })
       setStep('done')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed.')
+      setError(err instanceof Error ? err.message : t('Analysis failed.'))
       setStep('error')
     }
   }
@@ -308,7 +311,7 @@ function UploadPage() {
           </div>
 
           <button
-            onClick={() => navigate({ to: '/dashboard' })}
+            onClick={() => navigate({ to: '/dashboard', search: { upgraded: false } })}
             className="w-full rounded-xl bg-coral-500 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-coral-600"
           >
             View full dashboard

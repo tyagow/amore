@@ -28,6 +28,8 @@ const chatMessageSchema = z.object({
   fromMe: z.boolean(),
 })
 
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
+
 /**
  * Generate AI reply suggestions based on recent messages.
  */
@@ -35,6 +37,7 @@ export const getChatAISuggestions = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       messages: z.array(chatMessageSchema).min(1).max(50),
+      locale: localeSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -64,7 +67,7 @@ export const getChatAISuggestions = createServerFn({ method: 'POST' })
         }
       : undefined
 
-    const suggestions = await generateReplySuggestions(data.messages, profile)
+    const suggestions = await generateReplySuggestions(data.messages, profile, data.locale)
 
     return { suggestions }
   })
@@ -76,6 +79,7 @@ export const getChatAIMood = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       messages: z.array(chatMessageSchema).min(1).max(50),
+      locale: localeSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -118,7 +122,7 @@ export const getChatAIMood = createServerFn({ method: 'POST' })
     const result = await analyzeLiveMood(data.messages, {
       loveLanguages,
       recentInsights,
-    })
+    }, data.locale)
 
     return result
   })
@@ -131,6 +135,7 @@ export const getChatAIReview = createServerFn({ method: 'POST' })
     z.object({
       messages: z.array(chatMessageSchema).min(1).max(50),
       draft: z.string().min(1).max(2000),
+      locale: localeSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -163,7 +168,7 @@ export const getChatAIReview = createServerFn({ method: 'POST' })
         }
       : undefined
 
-    const result = await reviewMessageTone(data.draft, data.messages, profile)
+    const result = await reviewMessageTone(data.draft, data.messages, profile, data.locale)
 
     // Track usage for free users
     if (plan === 'free') {

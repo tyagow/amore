@@ -1,7 +1,16 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { setMood } from '~/server/mood'
+import { storeChatDraft } from '~/lib/chat-draft-storage'
+import { useI18n } from '~/lib/i18n'
+import {
+  SUPPORT_NEEDS,
+  buildCheckinDraft,
+  type CheckinMood,
+  type SupportNeed,
+} from './daily-checkin-support'
 
-type Mood = 'great' | 'good' | 'neutral' | 'low' | 'struggling'
+type Mood = CheckinMood
 type Visibility = 'silent' | 'visible' | 'alert'
 
 const MOODS: { value: Mood; emoji: string; label: string }[] = [
@@ -19,8 +28,10 @@ const VISIBILITIES: { value: Visibility; label: string; description: string }[] 
 ]
 
 export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
+  const { locale } = useI18n()
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null)
   const [visibility, setVisibility] = useState<Visibility | null>(null)
+  const [selectedSupport, setSelectedSupport] = useState<SupportNeed | null>(null)
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
@@ -37,6 +48,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
       setTimeout(() => {
         setSelectedMood(null)
         setVisibility(null)
+        setSelectedSupport(null)
         setNote('')
         setConfirmation(false)
         onMoodSet?.()
@@ -77,6 +89,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
             onClick={() => {
               setSelectedMood(m.value)
               setVisibility(null)
+              setSelectedSupport(null)
             }}
             className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all ${
               selectedMood === m.value
@@ -120,6 +133,41 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
       {/* Optional note — appears after visibility selection */}
       {selectedMood && visibility && (
         <div className="mt-4 space-y-3">
+          {visibility !== 'silent' && (
+            <div className="rounded-2xl border border-warm-200 bg-white/70 p-3">
+              <p className="text-sm font-semibold text-warm-900">
+                What would help your partner support you?
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {SUPPORT_NEEDS.map((need) => (
+                  <button
+                    key={need.value}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSupport(need.value)
+                      setNote(need.answer)
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      selectedSupport === need.value
+                        ? 'border-coral-400 bg-coral-50 text-coral-700'
+                        : 'border-warm-200 bg-white text-warm-600 hover:border-coral-200 hover:bg-coral-50'
+                    }`}
+                  >
+                    {need.label}
+                  </button>
+                ))}
+              </div>
+              <Link
+                to="/chat"
+                onClick={() => {
+                  storeChatDraft(buildCheckinDraft(selectedMood, selectedSupport, locale), locale)
+                }}
+                className="mt-3 inline-flex rounded-xl border border-coral-200 bg-coral-50 px-3 py-2 text-sm font-semibold text-coral-700 transition-colors hover:bg-coral-100"
+              >
+                Draft support message
+              </Link>
+            </div>
+          )}
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}

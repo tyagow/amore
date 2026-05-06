@@ -1,4 +1,5 @@
 import { formatTimeAgo } from '~/lib/format'
+import { useI18n } from '~/lib/i18n'
 
 interface AIPulseProps {
   lastAnalyzed: string | Date | null
@@ -6,7 +7,8 @@ interface AIPulseProps {
 }
 
 export function AIPulse({ lastAnalyzed, messagesSinceAnalysis }: AIPulseProps) {
-  const analyzedText = lastAnalyzed ? formatTimeAgo(lastAnalyzed) : null
+  const { locale, t } = useI18n()
+  const analyzedText = lastAnalyzed ? formatTimeAgo(lastAnalyzed, locale) : null
 
   return (
     <div className="flex items-center gap-2 text-xs text-warm-500">
@@ -15,10 +17,10 @@ export function AIPulse({ lastAnalyzed, messagesSinceAnalysis }: AIPulseProps) {
         <span className="relative inline-flex rounded-full h-2 w-2 bg-coral-500" />
       </span>
       <span>
-        AI active
-        {analyzedText && <> &middot; analyzed {analyzedText}</>}
+        {t('AI active')}
+        {analyzedText && <> &middot; {locale === 'pt-BR' ? 'analisado' : 'analyzed'} {analyzedText}</>}
         {messagesSinceAnalysis != null && messagesSinceAnalysis > 0 && (
-          <> &middot; {messagesSinceAnalysis} new messages</>
+          <> &middot; {messagesSinceAnalysis} {t('new messages')}</>
         )}
       </span>
     </div>

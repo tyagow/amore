@@ -1,5 +1,13 @@
+import { Link } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import type { getInsightsData } from '~/server/insights'
+import {
+  buildConflictRepairDraft,
+  buildGoalSuggestionDraft,
+  buildGoalSuggestionGoalDraft,
+} from './coaching-actions'
+import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
+import { useI18n } from '~/lib/i18n'
 
 type InsightsData = Awaited<ReturnType<typeof getInsightsData>>
 
@@ -191,6 +199,7 @@ function TipHistory({ tips }: { tips: InsightsData['allInsights'] }) {
 // ── Goal Suggestions ─────────────────────────────────────────────────────
 
 function GoalSuggestions({ goals }: { goals: InsightsData['allInsights'] }) {
+  const { locale } = useI18n()
   if (goals.length === 0) return null
 
   return (
@@ -216,6 +225,26 @@ function GoalSuggestions({ goals }: { goals: InsightsData['allInsights'] }) {
                 {goal.generatedAt && (
                   <p className="text-[10px] text-emerald-400 mt-1.5">{formatShortDate(goal.generatedAt)}</p>
                 )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    to="/chat"
+                    onClick={() => {
+                      storeChatDraft(buildGoalSuggestionDraft(title, description, locale), locale)
+                    }}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                  >
+                    Discuss with partner
+                  </Link>
+                  <Link
+                    to="/goals"
+                    onClick={() => {
+                      storeGoalDraft(buildGoalSuggestionGoalDraft(title, description, locale), locale)
+                    }}
+                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                  >
+                    Make it a goal
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -228,6 +257,7 @@ function GoalSuggestions({ goals }: { goals: InsightsData['allInsights'] }) {
 // ── Conflict Alerts ──────────────────────────────────────────────────────
 
 function ConflictAlerts({ alerts }: { alerts: InsightsData['allInsights'] }) {
+  const { locale } = useI18n()
   if (alerts.length === 0) return null
 
   return (
@@ -265,6 +295,15 @@ function ConflictAlerts({ alerts }: { alerts: InsightsData['allInsights'] }) {
                 {alert.generatedAt && (
                   <p className="text-[10px] text-red-300 mt-1.5">{formatShortDate(alert.generatedAt)}</p>
                 )}
+                <Link
+                  to="/chat"
+                  onClick={() => {
+                    storeChatDraft(buildConflictRepairDraft(message, locale), locale)
+                  }}
+                  className="mt-3 inline-flex rounded-lg bg-coral-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-coral-600"
+                >
+                  Draft softer repair
+                </Link>
               </div>
             </div>
           </div>

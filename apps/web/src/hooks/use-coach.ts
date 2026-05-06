@@ -10,6 +10,7 @@ import {
   saveCoachExchange,
 } from '~/server/coach'
 import { openUpgradeModal } from '~/lib/upgrade-gate'
+import { useI18n } from '~/lib/i18n'
 
 export interface CoachMessage {
   id: string
@@ -37,6 +38,8 @@ export interface CoachStarter {
   insight: string
   suggestions: string[]
 }
+
+const COACH_STREAM_STALL_TIMEOUT_MS = 60_000
 
 function toIsoString(value: unknown): string {
   if (value instanceof Date) return value.toISOString()
@@ -86,6 +89,7 @@ function normalizeNudge(nudge: {
 }
 
 export function useCoach(currentPage?: string) {
+  const { locale, t } = useI18n()
   const [threads, setThreads] = useState<CoachThread[]>([])
   const [activeThread, setActiveThread] = useState<CoachThread | null>(null)
   const [messages, setMessages] = useState<CoachMessage[]>([])
@@ -138,7 +142,7 @@ export function useCoach(currentPage?: string) {
 
     setStarterLoading(true)
     try {
-      const result = await getCoachStarter()
+      const result = await getCoachStarter({ data: { locale } })
       setStarter(result as CoachStarter | null)
     } catch (err) {
       console.error('[coach] failed to load starter', err)
@@ -146,7 +150,7 @@ export function useCoach(currentPage?: string) {
     } finally {
       setStarterLoading(false)
     }
-  }, [currentPage])
+  }, [currentPage, locale])
 
   const openThread = useCallback(async (threadId?: string) => {
     setIsLoading(true)
@@ -186,12 +190,12 @@ export function useCoach(currentPage?: string) {
 
       return thread
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open coach thread')
+      setError(err instanceof Error ? err.message : t('Failed to open coach thread'))
       throw err
     } finally {
       setIsLoading(false)
     }
-  }, [loadStarter])
+  }, [loadStarter, t])
 
   const newThread = useCallback(async () => {
     const thread = await openThread()
@@ -265,9 +269,28 @@ export function useCoach(currentPage?: string) {
     let fullResponse = ''
     let contextSnapshot: Record<string, unknown> | undefined
     let limitReached = false
+    let timedOut = false
+    let streamWatchdog: ReturnType<typeof setTimeout> | null = null
+    const timeoutMessage = t('Coach response timed out. Please try again.')
+
+    function clearStreamWatchdog() {
+      if (streamWatchdog) {
+        clearTimeout(streamWatchdog)
+        streamWatchdog = null
+      }
+    }
+
+    function armStreamWatchdog() {
+      clearStreamWatchdog()
+      streamWatchdog = setTimeout(() => {
+        timedOut = true
+        abortRef.current?.abort()
+      }, COACH_STREAM_STALL_TIMEOUT_MS)
+    }
 
     try {
       abortRef.current = new AbortController()
+      armStreamWatchdog()
 
       const params = new URLSearchParams({
         threadId: thread.id,
@@ -277,18 +300,19 @@ export function useCoach(currentPage?: string) {
       if (currentPage) {
         params.set('currentPage', currentPage)
       }
+      params.set('locale', locale)
 
       const response = await fetch(`/sse/coach?${params.toString()}`, {
         signal: abortRef.current.signal,
       })
 
       if (!response.ok) {
-        throw new Error('Failed to connect to coach')
+        throw new Error(t('Failed to connect to coach'))
       }
 
       const reader = response.body?.getReader()
       if (!reader) {
-        throw new Error('Coach response stream unavailable')
+        throw new Error(t('Coach response stream unavailable'))
       }
 
       const decoder = new TextDecoder()
@@ -324,6 +348,7 @@ export function useCoach(currentPage?: string) {
 
           if (payload.type === 'limit_reached') {
             limitReached = true
+            clearStreamWatchdog()
             openUpgradeModal({
               feature: payload.feature ?? 'coach_message',
               limit: payload.limit,
@@ -335,11 +360,13 @@ export function useCoach(currentPage?: string) {
           }
 
           if (payload.type === 'error') {
-            throw new Error(payload.content || 'Coach request failed')
+            clearStreamWatchdog()
+            throw new Error(payload.content || t('Coach request failed'))
           }
 
           if (payload.type === 'text') {
             fullResponse += payload.content ?? ''
+            armStreamWatchdog()
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === assistantId
@@ -352,6 +379,7 @@ export function useCoach(currentPage?: string) {
 
           fullResponse = payload.content ?? fullResponse
           contextSnapshot = payload.contextSnapshot
+          clearStreamWatchdog()
         }
 
         if (limitReached) {
@@ -389,7 +417,20 @@ export function useCoach(currentPage?: string) {
       const aborted =
         err instanceof Error && err.name === 'AbortError'
 
-      if (aborted && fullResponse.trim()) {
+      if (timedOut) {
+        if (fullResponse.trim()) {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId
+                ? { ...message, content: fullResponse, isStreaming: false }
+                : message,
+            ),
+          )
+        } else {
+          setMessages((prev) => prev.filter((message) => message.id !== assistantId))
+        }
+        setError(timeoutMessage)
+      } else if (aborted && fullResponse.trim()) {
         setMessages((prev) =>
           prev.map((message) =>
             message.id === assistantId
@@ -412,13 +453,14 @@ export function useCoach(currentPage?: string) {
       }
 
       if (!aborted) {
-        setError(err instanceof Error ? err.message : 'Coach request failed')
+        setError(err instanceof Error ? err.message : t('Coach request failed'))
       }
     } finally {
+      clearStreamWatchdog()
       abortRef.current = null
       setIsStreaming(false)
     }
-  }, [currentPage, isStreaming, persistExchange])
+  }, [currentPage, isStreaming, locale, persistExchange, t])
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort()

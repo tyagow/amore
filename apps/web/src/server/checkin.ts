@@ -6,12 +6,26 @@ import { dailyCheckins, engagementStreaks, moodStates } from '@amore-couples/db/
 import { eq, and } from 'drizzle-orm'
 import { emitCoupleEvent } from '~/lib/events'
 import { getDailyQuestion } from '@amore-couples/ai/daily-questions'
+import { gte } from 'drizzle-orm'
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
 
 // ── Helpers ────────────────────────────────────────────
 
 /** Get today's date as YYYY-MM-DD in UTC */
 function todayUTC(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+function lastNDatesUTC(count: number): string[] {
+  const today = new Date()
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate() - (count - 1 - index),
+    ))
+    return date.toISOString().slice(0, 10)
+  })
 }
 
 /** Check if two date strings are consecutive days */
@@ -29,13 +43,15 @@ function isConsecutiveDay(prev: string, current: string): boolean {
  * Returns the check-in (or null), partner's check-in status, streak info, and today's question.
  */
 export const getDailyCheckin = createServerFn({ method: 'GET' })
-  .handler(async () => {
+  .inputValidator(z.object({ locale: localeSchema }).optional())
+  .handler(async ({ data }) => {
     const { session, couple, partnerId } = await requireCouple()
     const today = todayUTC()
-    const question = getDailyQuestion(today)
+    const recentDates = lastNDatesUTC(7)
+    const question = getDailyQuestion(today, data?.locale ?? 'en')
 
     // Fetch user's check-in, partner's check-in, and streak in parallel
-    const [checkin, partnerCheckin, streak] = await Promise.all([
+    const [checkin, partnerCheckin, recentCheckins, streak] = await Promise.all([
       db.query.dailyCheckins.findFirst({
         where: and(
           eq(dailyCheckins.coupleId, couple.id),
@@ -50,14 +66,46 @@ export const getDailyCheckin = createServerFn({ method: 'GET' })
           eq(dailyCheckins.date, today),
         ),
       }),
+      db.query.dailyCheckins.findMany({
+        where: and(
+          eq(dailyCheckins.coupleId, couple.id),
+          gte(dailyCheckins.date, recentDates[0]),
+        ),
+      }),
       db.query.engagementStreaks.findFirst({
         where: eq(engagementStreaks.userId, session.user.id),
       }),
     ])
 
+    const rhythm = recentDates.map((date) => {
+      const mine = recentCheckins.find(
+        (entry) => entry.date === date && entry.userId === session.user.id,
+      )
+      const partner = recentCheckins.find(
+        (entry) => entry.date === date && entry.userId === partnerId,
+      )
+      return {
+        date,
+        mineMood: mine?.mood ?? null,
+        partnerMood: partner?.mood ?? null,
+        bothCheckedIn: !!mine && !!partner,
+      }
+    })
+
     return {
       checkin: checkin ?? null,
+      partnerCheckin: partnerCheckin
+        ? {
+            id: partnerCheckin.id,
+            mood: partnerCheckin.mood,
+            note: partnerCheckin.note,
+            question: partnerCheckin.question,
+            answer: partnerCheckin.answer,
+            date: partnerCheckin.date,
+          }
+        : null,
       partnerCheckedIn: !!partnerCheckin,
+      recentCheckins: rhythm,
       streak: {
         currentStreak: streak?.currentStreak ?? 0,
         longestStreak: streak?.longestStreak ?? 0,
@@ -76,12 +124,13 @@ export const submitDailyCheckin = createServerFn({ method: 'POST' })
       mood: z.enum(['great', 'good', 'neutral', 'low', 'struggling']),
       note: z.string().max(1000).optional(),
       answer: z.string().max(2000).optional(),
+      locale: localeSchema,
     }),
   )
   .handler(async ({ data }) => {
     const { session, couple } = await requireCouple()
     const today = todayUTC()
-    const question = getDailyQuestion(today)
+    const question = getDailyQuestion(today, data.locale)
 
     // Insert the check-in (unique index prevents duplicates)
     let checkin

@@ -1,0 +1,65 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - link "Amore" [ref=e5] [cursor=pointer]:
+      - /url: /dashboard?upgraded=false
+    - generic [ref=e6]:
+      - link "Dashboard" [ref=e7] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e9]
+        - text: Dashboard
+      - link "Insights" [ref=e11] [cursor=pointer]:
+        - /url: /insights
+        - img [ref=e13]
+        - text: Insights
+      - link "Goals" [ref=e15] [cursor=pointer]:
+        - /url: /goals
+        - img [ref=e17]
+        - text: Goals
+      - link "Chat" [ref=e20] [cursor=pointer]:
+        - /url: /chat
+        - img [ref=e22]
+        - text: Chat
+      - link "WhatsApp" [ref=e24] [cursor=pointer]:
+        - /url: /whatsapp
+        - img [ref=e26]
+        - text: WhatsApp
+      - link "Profile" [ref=e28] [cursor=pointer]:
+        - /url: /profile
+        - img [ref=e30]
+        - text: Profile
+    - generic [ref=e32]:
+      - button "Coach" [ref=e33]:
+        - img [ref=e35]
+        - text: Coach
+      - button "Sign Out" [ref=e37]:
+        - img [ref=e38]
+        - text: Sign Out
+  - generic [ref=e41]:
+    - generic [ref=e42]:
+      - heading "Upload a WhatsApp chat" [level=1] [ref=e43]
+      - paragraph [ref=e44]: Export a conversation from WhatsApp, upload the .txt file, and get relationship insights in under a minute.
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - heading "Preview" [level=2] [ref=e73]
+        - generic [ref=e74]: 8 messages
+      - paragraph [ref=e75]: Jan 1, 2026 to Feb 1, 2026
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - text: Alex
+          - paragraph [ref=e78]: Good morning, I loved dinner yesterday.
+        - generic [ref=e79]:
+          - text: Sam
+          - paragraph [ref=e80]: Me too. I felt really close to you.
+        - generic [ref=e81]:
+          - text: Alex
+          - paragraph [ref=e82]: I got stressed when plans changed.
+        - generic [ref=e83]:
+          - text: Sam
+          - paragraph [ref=e84]: I noticed. I wanted us to slow down before arguing.
+        - generic [ref=e85]:
+          - text: Alex
+          - paragraph [ref=e86]: Thank you for being patient with me.
+      - paragraph [ref=e88]: Only 8 messages found. For better insights, upload a conversation with at least 50 messages.
+      - generic [ref=e89]:
+        - button "Analyze conversation" [ref=e90]
+        - button "Cancel" [ref=e91]

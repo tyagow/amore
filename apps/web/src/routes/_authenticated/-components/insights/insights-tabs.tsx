@@ -1,3 +1,5 @@
+import { useI18n } from '~/lib/i18n'
+
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'communication', label: 'Communication' },
@@ -14,6 +16,7 @@ interface InsightsTabsProps {
 }
 
 export function InsightsTabs({ activeTab, onTabChange }: InsightsTabsProps) {
+  const { t } = useI18n()
   return (
     <div className="flex gap-1 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
       {TABS.map((tab) => (
@@ -29,7 +32,7 @@ export function InsightsTabs({ activeTab, onTabChange }: InsightsTabsProps) {
             }
           `}
         >
-          {tab.label}
+          {t(tab.label)}
         </button>
       ))}
     </div>

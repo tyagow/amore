@@ -1,5 +1,6 @@
 import { SentimentSparkline } from './sentiment-sparkline'
 import { CommBalance } from './comm-balance'
+import { useI18n } from '~/lib/i18n'
 
 interface SentimentDay {
   day: string
@@ -19,6 +20,7 @@ interface PatternCardsProps {
 }
 
 export function PatternCards({ sentimentByDay, messageStats }: PatternCardsProps) {
+  const { t } = useI18n()
   // Calculate sentiment trend vs last week
   const sentimentTrend = calculateTrend(sentimentByDay)
 
@@ -32,7 +34,7 @@ export function PatternCards({ sentimentByDay, messageStats }: PatternCardsProps
       {/* Sentiment Trend */}
       <div className="bg-warm-100 rounded-2xl p-4 shadow-sm">
         <p className="text-[10px] font-medium text-warm-500 uppercase tracking-wide mb-2">
-          Sentiment
+          {t('Sentiment')}
         </p>
         <SentimentSparkline data={sentimentByDay} width={100} height={40} />
         {sentimentTrend !== null && (
@@ -41,7 +43,7 @@ export function PatternCards({ sentimentByDay, messageStats }: PatternCardsProps
               {sentimentTrend >= 0 ? '+' : ''}
               {sentimentTrend}%
             </span>{' '}
-            vs last week
+            {t('vs last week')}
           </p>
         )}
       </div>
@@ -49,19 +51,19 @@ export function PatternCards({ sentimentByDay, messageStats }: PatternCardsProps
       {/* Communication Balance */}
       <div className="bg-warm-100 rounded-2xl p-4 shadow-sm">
         <p className="text-[10px] font-medium text-warm-500 uppercase tracking-wide mb-2">
-          Balance
+          {t('Balance')}
         </p>
         {messageStats && messageStats.totalMessages > 0 ? (
           <CommBalance youPercent={50} partnerPercent={50} />
         ) : (
-          <p className="text-xs text-warm-400 mt-4 text-center">No data yet</p>
+          <p className="text-xs text-warm-400 mt-4 text-center">{t('No data yet')}</p>
         )}
       </div>
 
       {/* Message Frequency */}
       <div className="bg-warm-100 rounded-2xl p-4 shadow-sm">
         <p className="text-[10px] font-medium text-warm-500 uppercase tracking-wide mb-2">
-          Activity
+          {t('Activity')}
         </p>
         {last7.length > 0 ? (
           <div className="flex items-end gap-1 h-10">
@@ -70,16 +72,16 @@ export function PatternCards({ sentimentByDay, messageStats }: PatternCardsProps
                 key={i}
                 className="flex-1 bg-coral-400 rounded-t opacity-70 hover:opacity-100 transition-opacity"
                 style={{ height: `${Math.max((count / maxMsg) * 100, 4)}%` }}
-                title={`${count} messages`}
+                title={`${count} ${t('messages')}`}
               />
             ))}
           </div>
         ) : (
-          <p className="text-xs text-warm-400 mt-4 text-center">No data yet</p>
+          <p className="text-xs text-warm-400 mt-4 text-center">{t('No data yet')}</p>
         )}
         {messageStats && (
           <p className="text-[10px] text-warm-500 mt-2">
-            ~{messageStats.dailyAverage}/day avg
+            ~{messageStats.dailyAverage}{t('/day avg')}
           </p>
         )}
       </div>

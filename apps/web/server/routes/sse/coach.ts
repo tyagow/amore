@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
   const message = typeof query.message === 'string' ? query.message.trim() : ''
   const currentPage =
     typeof query.currentPage === 'string' ? query.currentPage : undefined
+  const locale = query.locale === 'pt-BR' ? 'pt-BR' : 'en'
 
   if (!threadId || !message) {
     throw createError({
@@ -126,21 +127,6 @@ export default defineEventHandler(async (event) => {
     content: row.content,
   }))
 
-  const intent = await classifyIntent(message)
-
-  // Build context — full context for coupled users, minimal for solo
-  const contextSnapshot = couple && partnerId
-    ? await fetchCoachContext(couple.id, session.user.id, partnerId, intent)
-    : {}  // Solo user — empty context, coach uses solo system prompt
-
-  const textStream = await streamCoachResponse(
-    threadHistory,
-    message,
-    contextSnapshot,
-    currentPage,
-    !couple,  // isSolo flag
-  )
-
   const body = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
@@ -177,6 +163,29 @@ export default defineEventHandler(async (event) => {
 
       try {
         let fullResponse = ''
+        const intent = await classifyIntent(message)
+          .catch((error) => {
+            console.error('[coach] failed to classify intent', error)
+            return 'general' as const
+          })
+
+        if (closed) return
+
+        // Build context — full context for coupled users, minimal for solo
+        const contextSnapshot = couple && partnerId
+          ? await fetchCoachContext(couple.id, session.user.id, partnerId, intent)
+          : {}  // Solo user — empty context, coach uses solo system prompt
+
+        if (closed) return
+
+        const textStream = await streamCoachResponse(
+          threadHistory,
+          message,
+          contextSnapshot,
+          currentPage,
+          !couple,  // isSolo flag
+          locale,
+        )
 
         for await (const chunk of textStream) {
           if (closed) break

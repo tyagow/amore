@@ -10,6 +10,7 @@ import {
   selectWaContact,
 } from '~/server/wa-session'
 import type { WaContact } from '~/lib/wa-bridge'
+import { useI18n } from '~/lib/i18n'
 
 export const Route = createFileRoute('/_authenticated/whatsapp')({
   component: WhatsAppPage,
@@ -31,6 +32,7 @@ type SessionState =
 function WhatsAppPage() {
   const { waSession, whatsappJid } = Route.useLoaderData()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [state, setState] = useState<SessionState>(() => {
     if (waSession && waSession.status === 'connected') {
       // If partner JID is already set, go to connected; otherwise start as idle
@@ -167,7 +169,7 @@ function WhatsAppPage() {
       await selectWaContact({ data: { waSessionId: state.waSessionId, contactJid: contact.jid } })
       hasPartnerJid.current = true
       setState({ phase: 'connected', waSessionId: state.waSessionId })
-      navigate({ to: '/dashboard' })
+      navigate({ to: '/dashboard', search: { upgraded: false } })
     } catch (err) {
       setState({
         phase: 'error',
@@ -311,7 +313,7 @@ function WhatsAppPage() {
             <div className="max-h-80 overflow-y-auto rounded-xl border border-warm-200/50">
               {filteredContacts.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-warm-400">
-                  {contactSearch ? 'No contacts match your search.' : 'No contacts found.'}
+                  {contactSearch ? t('No contacts match your search.') : t('No contacts found.')}
                 </div>
               ) : (
                 <ul className="divide-y divide-warm-100">
@@ -372,7 +374,7 @@ function WhatsAppPage() {
             {selectingContact && (
               <div className="mt-3 flex items-center justify-center gap-2 text-sm text-warm-500">
                 <div className="w-4 h-4 border-2 border-warm-300 border-t-warm-900 rounded-full animate-spin" />
-                Saving selection...
+                {t('Saving selection...')}
               </div>
             )}
           </div>
@@ -450,7 +452,7 @@ function WhatsAppPage() {
               disabled={loading}
               className="flex-1 py-2.5 bg-coral-500 text-white rounded-lg font-medium hover:bg-coral-600 focus:outline-none focus:ring-2 focus:ring-coral-300 shadow-sm shadow-coral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Connecting...' : 'Connect WhatsApp'}
+              {loading ? t('Connecting...') : t('Connect WhatsApp')}
             </button>
           )}
 
@@ -460,7 +462,7 @@ function WhatsAppPage() {
               disabled={loading}
               className="flex-1 py-2.5 border border-warm-300 text-warm-700 rounded-lg font-medium hover:bg-warm-100 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Disconnecting...' : 'Disconnect'}
+              {loading ? t('Disconnecting...') : t('Disconnect')}
             </button>
           )}
 
@@ -472,7 +474,7 @@ function WhatsAppPage() {
               }}
               className="flex-1 py-2.5 border border-warm-300 text-warm-700 rounded-lg font-medium hover:bg-warm-100 transition-colors"
             >
-              Cancel
+              {t('Cancel')}
             </button>
           )}
         </div>
@@ -481,7 +483,7 @@ function WhatsAppPage() {
       {/* ── Instructions ─────────────────────────────────────────── */}
       <div className="bg-warm-100 rounded-2xl shadow-lg p-8">
         <h2 className="text-lg font-bold text-warm-900 mb-4">
-          How it works
+          {t('How it works')}
         </h2>
         <ol className="space-y-3 text-sm text-warm-600">
           <li className="flex gap-3">
@@ -489,7 +491,7 @@ function WhatsAppPage() {
               1
             </span>
             <span>
-              Click <strong>Connect WhatsApp</strong> to start a new session.
+              {t('Click')} <strong>{t('Connect WhatsApp')}</strong> {t('to start a new session.')}
             </span>
           </li>
           <li className="flex gap-3">

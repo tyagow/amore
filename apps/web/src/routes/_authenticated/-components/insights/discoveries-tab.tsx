@@ -1,22 +1,49 @@
-import { useMemo } from 'react'
+import { Link } from '@tanstack/react-router'
+import { useMemo, useState } from 'react'
 import type { getInsightsData } from '~/server/insights'
+import {
+  buildImportantDateChatDraft,
+  buildDiscoveryMove,
+  buildInterestChatDraft,
+  buildWishChatDraft,
+  getEntityField,
+  getEntityText,
+  getDiscoveryList,
+} from './discovery-actions'
+import { useI18n } from '~/lib/i18n'
+import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
 
 type InsightsData = Awaited<ReturnType<typeof getInsightsData>>
 
 // ── helpers ──────────────────────────────────────────────────────────────
 
 function formatDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const date = typeof d === 'string' ? parseDateOnly(d) : d
+  if (Number.isNaN(date.getTime())) return String(d)
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function daysUntil(dateStr: string) {
-  const target = new Date(dateStr)
+  const target = parseDateOnly(dateStr)
+  if (Number.isNaN(target.getTime())) return null
+
   const now = new Date()
   // Set both to midnight for clean day diff
   target.setHours(0, 0, 0, 0)
   now.setHours(0, 0, 0, 0)
   const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   return diff
+}
+
+function parseDateOnly(value: string) {
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  return new Date(value)
 }
 
 // ── Empty state ──────────────────────────────────────────────────────────
@@ -76,6 +103,7 @@ function LoveLanguagesRadar({
   partnerProfile: InsightsData['partnerProfile']
   partnerName: string
 }) {
+  const { locale, t } = useI18n()
   const myLL = myProfile?.loveLanguages as unknown as LoveLanguageEntry[] | null
   const partnerLL = partnerProfile?.loveLanguages as unknown as LoveLanguageEntry[] | null
 
@@ -86,7 +114,7 @@ function LoveLanguagesRadar({
   )
 
   if (!myScores && !partnerScores) {
-    return <EmptyState message="Love languages haven't been detected yet. Keep chatting naturally and they'll emerge." />
+    return <EmptyState message={t("Love languages haven't been detected yet. Keep chatting naturally and they'll emerge.")} />
   }
 
   const size = 260
@@ -105,7 +133,7 @@ function LoveLanguagesRadar({
   const labelR = maxR + 24
   const labels = CANONICAL_LANGUAGES.map((lang, i) => {
     const angle = (Math.PI * 2 * i) / n - Math.PI / 2
-    return { label: lang, x: cx + labelR * Math.cos(angle), y: cy + labelR * Math.sin(angle) }
+    return { label: t(lang), x: cx + labelR * Math.cos(angle), y: cy + labelR * Math.sin(angle) }
   })
 
   // Score to polygon
@@ -194,7 +222,7 @@ function LoveLanguagesRadar({
         {myScores && (
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-coral-400 inline-block" />
-            You
+            {t('You')}
           </span>
         )}
         {partnerScores && (
@@ -219,8 +247,9 @@ function SharedInterests({
   partnerProfile: InsightsData['partnerProfile']
   partnerName: string
 }) {
-  const myInterests = (myProfile?.interests as unknown as string[]) ?? []
-  const partnerInterests = (partnerProfile?.interests as unknown as string[]) ?? []
+  const { locale } = useI18n()
+  const myInterests = getDiscoveryList(myProfile?.interests)
+  const partnerInterests = getDiscoveryList(partnerProfile?.interests)
 
   if (myInterests.length === 0 && partnerInterests.length === 0) {
     return <EmptyState message="No interests discovered yet. They'll appear here as conversations reveal shared hobbies and passions." />
@@ -268,12 +297,14 @@ function SharedInterests({
     <div>
       <div className="flex flex-wrap gap-2">
         {sorted.map(([key, who]) => (
-          <span
+          <Link
             key={key}
+            to="/chat"
+            onClick={() => storeChatDraft(buildInterestChatDraft(originals.get(key) ?? key, locale), locale)}
             className={`inline-block px-3 py-1.5 rounded-full text-xs font-medium border ${colorMap[who]}`}
           >
             {originals.get(key) ?? key}
-          </span>
+          </Link>
         ))}
       </div>
       <div className="flex gap-4 mt-3 text-xs text-warm-400">
@@ -296,20 +327,26 @@ function SharedInterests({
 
 // ── Wishlist ─────────────────────────────────────────────────────────────
 
+const DEFAULT_DISCOVERY_ROWS = 6
+
 function Wishlist({ entities }: { entities: InsightsData['entities'] }) {
+  const { locale, t } = useI18n()
+  const [showAll, setShowAll] = useState(false)
   const wishes = entities.filter((e) => e.type === 'wish')
 
   if (wishes.length === 0) {
     return <EmptyState message="No wishes found yet. When you or your partner mention things you'd like, they'll show up here." />
   }
 
+  const visibleWishes = showAll ? wishes : wishes.slice(0, DEFAULT_DISCOVERY_ROWS)
+  const hiddenCount = wishes.length - visibleWishes.length
+
   return (
     <div className="space-y-3">
-      {wishes.map((wish) => {
-        const c = wish.content as Record<string, unknown>
-        const text = String(c.text ?? c.description ?? '')
-        const speaker = String(c.speaker ?? '')
-        const status = String(c.status ?? wish.status ?? 'active')
+      {visibleWishes.map((wish) => {
+        const text = getEntityText(wish)
+        const speaker = getEntityField(wish, 'speaker')
+        const status = getEntityField(wish, 'status') || String(wish.status ?? 'active')
 
         return (
           <div key={wish.id} className="p-4 bg-warm-50 rounded-xl flex items-start gap-3">
@@ -328,6 +365,13 @@ function Wishlist({ entities }: { entities: InsightsData['entities'] }) {
                   <span className="text-xs text-warm-300">{formatDate(wish.extractedAt)}</span>
                 )}
               </div>
+              <Link
+                to="/chat"
+                onClick={() => storeChatDraft(buildWishChatDraft(text, locale), locale)}
+                className="mt-2 inline-flex rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50"
+              >
+                {t('Plan in chat')}
+              </Link>
             </div>
             <span
               className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0 ${
@@ -341,6 +385,15 @@ function Wishlist({ entities }: { entities: InsightsData['entities'] }) {
           </div>
         )
       })}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="w-full rounded-xl border border-warm-200 bg-white px-4 py-3 text-sm font-semibold text-warm-600 transition-colors hover:border-warm-300 hover:bg-warm-50"
+        >
+          Show {hiddenCount} more wishes
+        </button>
+      )}
     </div>
   )
 }
@@ -348,18 +401,22 @@ function Wishlist({ entities }: { entities: InsightsData['entities'] }) {
 // ── Important Dates ──────────────────────────────────────────────────────
 
 function ImportantDates({ entities }: { entities: InsightsData['entities'] }) {
+  const { locale, t } = useI18n()
+  const [showAll, setShowAll] = useState(false)
   const dates = entities.filter((e) => e.type === 'important_date')
 
   if (dates.length === 0) {
     return <EmptyState message="No important dates found yet. Mention birthdays, anniversaries, or special days in your chats." />
   }
 
+  const visibleDates = showAll ? dates : dates.slice(0, DEFAULT_DISCOVERY_ROWS)
+  const hiddenCount = dates.length - visibleDates.length
+
   return (
     <div className="space-y-3">
-      {dates.map((entity) => {
-        const c = entity.content as Record<string, unknown>
-        const description = String(c.description ?? c.text ?? c.name ?? '')
-        const dateStr = String(c.date ?? '')
+      {visibleDates.map((entity) => {
+        const description = getEntityText(entity)
+        const dateStr = getEntityField(entity, 'date')
         const countdown = dateStr ? daysUntil(dateStr) : null
 
         return (
@@ -374,6 +431,13 @@ function ImportantDates({ entities }: { entities: InsightsData['entities'] }) {
               {dateStr && (
                 <p className="text-xs text-warm-400 mt-0.5">{formatDate(dateStr)}</p>
               )}
+              <Link
+                to="/chat"
+                onClick={() => storeChatDraft(buildImportantDateChatDraft(description || dateStr, locale), locale)}
+                className="mt-2 inline-flex rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50"
+              >
+                {t('Plan in chat')}
+              </Link>
             </div>
             {countdown !== null && (
               <div className="text-right flex-shrink-0">
@@ -392,13 +456,72 @@ function ImportantDates({ entities }: { entities: InsightsData['entities'] }) {
           </div>
         )
       })}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="w-full rounded-xl border border-warm-200 bg-white px-4 py-3 text-sm font-semibold text-warm-600 transition-colors hover:border-warm-300 hover:bg-warm-50"
+        >
+          Show {hiddenCount} more dates
+        </button>
+      )}
     </div>
   )
 }
 
 // ── Main component ───────────────────────────────────────────────────────
 
+function DiscoveryMove({
+  data,
+  partnerName,
+}: {
+  data: InsightsData
+  partnerName: string
+}) {
+  const { locale, t } = useI18n()
+  const move = buildDiscoveryMove({
+    myInterests: data.myProfile?.interests,
+    partnerInterests: data.partnerProfile?.interests,
+    entities: data.entities,
+    partnerName,
+    locale,
+  })
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-500">
+            Discovery move
+          </p>
+          <h3 className="mt-1 font-display text-lg text-warm-800">{move.title}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-warm-500">
+            {move.detail} Make the discovery visible in the relationship, not just in the app.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            to="/chat"
+            onClick={() => storeChatDraft(move.chatDraft, locale)}
+            className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
+          >
+            {t('Open in chat')}
+          </Link>
+          <Link
+            to="/goals"
+            onClick={() => storeGoalDraft(move.goalDraft, locale)}
+            className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50"
+          >
+            {t('Make it a goal')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function DiscoveriesTab({ data }: { data: InsightsData }) {
+  const { t } = useI18n()
   const partnerName = data.partner?.name ?? 'Partner'
   const hasProfiles = data.myProfile || data.partnerProfile
   const hasEntities = data.entities.length > 0
@@ -407,7 +530,7 @@ export function DiscoveriesTab({ data }: { data: InsightsData }) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
-          <EmptyState message="No discoveries yet. Keep chatting naturally — the AI will learn about your love languages, interests, wishes, and important dates." />
+          <EmptyState message={t('No discoveries yet. Keep chatting naturally — the AI will learn about your love languages, interests, wishes, and important dates.')} />
         </div>
       </div>
     )
@@ -415,9 +538,11 @@ export function DiscoveriesTab({ data }: { data: InsightsData }) {
 
   return (
     <div className="space-y-6">
+      <DiscoveryMove data={data} partnerName={partnerName} />
+
       {/* Love Languages */}
       <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
-        <h3 className="font-display text-base text-warm-800 mb-4">Love Languages</h3>
+        <h3 className="font-display text-base text-warm-800 mb-4">{t('Love Languages')}</h3>
         <LoveLanguagesRadar
           myProfile={data.myProfile}
           partnerProfile={data.partnerProfile}
@@ -427,7 +552,7 @@ export function DiscoveriesTab({ data }: { data: InsightsData }) {
 
       {/* Shared Interests */}
       <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
-        <h3 className="font-display text-base text-warm-800 mb-4">Shared Interests</h3>
+        <h3 className="font-display text-base text-warm-800 mb-4">{t('Shared Interests')}</h3>
         <SharedInterests
           myProfile={data.myProfile}
           partnerProfile={data.partnerProfile}

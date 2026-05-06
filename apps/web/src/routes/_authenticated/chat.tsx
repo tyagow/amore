@@ -8,6 +8,7 @@ import { MessageList } from './-components/chat/message-list'
 import { ChatInput } from './-components/chat/chat-input'
 import { ReviewPanel } from './-components/chat/review-panel'
 import { LoggedOutOverlay } from './-components/chat/logged-out-overlay'
+import { AISidebar } from './-components/chat/ai-sidebar'
 
 export const Route = createFileRoute('/_authenticated/chat')({
   component: ChatPage,
@@ -53,6 +54,7 @@ function ChatPage() {
 function ChatPageConnected() {
   const navigate = useNavigate()
   const [inputText, setInputText] = useState('')
+  const [showMobileAssistant, setShowMobileAssistant] = useState(false)
 
   const {
     messages,
@@ -67,10 +69,21 @@ function ChatPageConnected() {
   } = useChatWebSocket()
 
   const {
+    suggestions,
+    suggestionsLoading,
+    mood,
+    moodLoading,
+    coaching,
+    tensionFlag,
+    aiError,
     review,
     reviewLoading,
     reviewDraft,
     clearReview,
+    healthScore,
+    partnerProfile,
+    recentInsights,
+    totalMessages,
     partnerName,
     contactJid,
   } = useChatAI(messages)
@@ -112,6 +125,10 @@ function ChatPageConnected() {
     }
   }, [review, clearReview])
 
+  const handleUseSuggestion = useCallback((text: string) => {
+    setInputText(text)
+  }, [])
+
   return (
     <div className="flex h-dvh -mb-20 md:mb-0 relative">
       {/* Logged out overlay */}
@@ -125,6 +142,40 @@ function ChatPageConnected() {
           onResync={handleResync}
           isResyncing={isResyncing}
         />
+        <div className="border-b border-warm-200 bg-warm-50 px-4 py-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setShowMobileAssistant((open) => !open)}
+            className="flex w-full items-center justify-between rounded-xl border border-warm-200 bg-white px-3 py-2 text-left text-sm font-medium text-warm-700"
+          >
+            <span>AI relationship context</span>
+            <span className="text-xs text-coral-600">
+              {showMobileAssistant ? 'Hide' : 'Show'}
+            </span>
+          </button>
+          {showMobileAssistant && (
+            <div className="mt-2 max-h-80 overflow-y-auto rounded-2xl border border-warm-200">
+              <AISidebar
+                healthScore={healthScore}
+                mood={mood}
+                moodLoading={moodLoading}
+                coaching={coaching}
+                suggestions={suggestions}
+                suggestionsLoading={suggestionsLoading}
+                tensionFlag={tensionFlag}
+                aiError={aiError}
+                totalMessages={totalMessages}
+                partnerName={partnerName}
+                onUseSuggestion={(text) => {
+                  handleUseSuggestion(text)
+                  setShowMobileAssistant(false)
+                }}
+                partnerProfile={partnerProfile}
+                recentInsights={recentInsights}
+              />
+            </div>
+          )}
+        </div>
         <MessageList
           messages={messages}
           hasMore={hasMore}
@@ -147,6 +198,23 @@ function ChatPageConnected() {
           setInputText={setInputText}
         />
       </div>
+      <aside className="hidden w-80 shrink-0 border-l border-warm-200 lg:block">
+        <AISidebar
+          healthScore={healthScore}
+          mood={mood}
+          moodLoading={moodLoading}
+          coaching={coaching}
+          suggestions={suggestions}
+          suggestionsLoading={suggestionsLoading}
+          tensionFlag={tensionFlag}
+          aiError={aiError}
+          totalMessages={totalMessages}
+          partnerName={partnerName}
+          onUseSuggestion={handleUseSuggestion}
+          partnerProfile={partnerProfile}
+          recentInsights={recentInsights}
+        />
+      </aside>
     </div>
   )
 }

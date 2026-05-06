@@ -1,6 +1,7 @@
 import { HeadContent, Scripts, createRootRoute, type ErrorComponentProps } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import appCss from '~/styles.css?url'
+import { GlobalLanguageToggle, I18nProvider } from '~/lib/i18n'
 
 function RootErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
@@ -68,7 +69,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-warm-50 text-warm-800 font-sans">
-        {children}
+        <I18nProvider>
+          {children}
+          <GlobalLanguageToggle />
+        </I18nProvider>
         <Scripts />
       </body>
     </html>

@@ -1,5 +1,6 @@
 import { getClient } from './client'
 import { AI_MODEL, parseValidatedResponse, withRetry } from './config'
+import { getAILocaleInstruction, type AILocale } from './locale'
 import { coachingTipsSchema } from './schemas'
 import type { User } from '@amore-couples/types'
 
@@ -34,6 +35,7 @@ export interface MoodCoachingInput {
  */
 export async function generateMoodCoaching(
   input: MoodCoachingInput,
+  locale: AILocale = 'en',
 ): Promise<CoachingTip[]> {
   const client = getClient()
 
@@ -62,7 +64,7 @@ Consider:
 - Concrete actions they can take immediately
 
 Return a JSON array of objects with: category (string — e.g. "Listen", "Comfort", "Space"), tip (string — the actionable suggestion), context (string — why this approach may help).
-Return ONLY valid JSON, no markdown.`,
+Return ONLY valid JSON, no markdown.${getAILocaleInstruction(locale)}`,
       messages: [
         {
           role: 'user',
@@ -81,6 +83,7 @@ export async function generateCoachingTips(
   healthScore: number,
   userA?: Pick<User, 'name'> | null,
   userB?: Pick<User, 'name'> | null,
+  locale: AILocale = 'en',
 ): Promise<CoachingTip[]> {
   const client = getClient()
 
@@ -96,7 +99,7 @@ export async function generateCoachingTips(
       system: `You are Amore, a warm and sophisticated couple's coach. Based on the conversation analysis, generate 3-5 actionable coaching tips tailored to both partners. Each tip should be specific, actionable, and kind.${profileContext}
 
 Return a JSON array of objects with: category (string), tip (string), context (string explaining why this matters for the couple).
-Return ONLY valid JSON, no markdown.`,
+Return ONLY valid JSON, no markdown.${getAILocaleInstruction(locale)}`,
       messages: [
         {
           role: 'user',

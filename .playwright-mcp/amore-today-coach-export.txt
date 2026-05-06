@@ -1,0 +1,8 @@
+[01/01/26, 09:00:00] Alex: Good morning, I loved dinner yesterday.
+[01/01/26, 09:02:00] Sam: Me too. I felt really close to you.
+[01/01/26, 18:15:00] Alex: I got stressed when plans changed.
+[01/01/26, 18:18:00] Sam: I noticed. I wanted us to slow down before arguing.
+[01/02/26, 08:00:00] Alex: Thank you for being patient with me.
+[01/02/26, 08:05:00] Sam: I appreciate you saying that. Let us plan tonight calmly.
+[01/02/26, 20:30:00] Alex: I can listen first before jumping to solutions.
+[01/02/26, 20:35:00] Sam: That would help me feel supported.

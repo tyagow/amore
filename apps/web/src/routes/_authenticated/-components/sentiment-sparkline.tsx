@@ -1,3 +1,5 @@
+import { useI18n } from '~/lib/i18n'
+
 interface SentimentPoint {
   day: string
   avg_sentiment: number
@@ -16,11 +18,12 @@ export function SentimentSparkline({
   height = 40,
   className,
 }: SentimentSparklineProps) {
+  const { t } = useI18n()
   if (data.length < 2) {
     return (
       <svg width={width} height={height} className={className}>
         <text x={width / 2} y={height / 2} textAnchor="middle" fontSize="10" fill="#A89888">
-          Not enough data
+          {t('Not enough data')}
         </text>
       </svg>
     )

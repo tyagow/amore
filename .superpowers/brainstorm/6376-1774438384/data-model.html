@@ -1,0 +1,81 @@
+<h2>Couple Rules — Data Model</h2>
+<p class="subtitle">Two tables: rules (with versioning) and events (compliance tracking)</p>
+
+<div class="section">
+  <h3>couple_rules</h3>
+  <div class="mockup">
+    <div class="mockup-header">Table: couple_rules</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 2px solid #e8e0d8;">
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Column</th>
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Type</th>
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Notes</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">id</td><td style="padding: 6px 12px;">uuid PK</td><td style="padding: 6px 12px;">Unique per version</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">rule_group_id</td><td style="padding: 6px 12px;">uuid</td><td style="padding: 6px 12px;">Same across all versions of a rule</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">couple_id</td><td style="padding: 6px 12px;">uuid FK → couples</td><td style="padding: 6px 12px;"></td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">version</td><td style="padding: 6px 12px;">integer</td><td style="padding: 6px 12px;">1, 2, 3… New row per amendment</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">title</td><td style="padding: 6px 12px;">varchar(200)</td><td style="padding: 6px 12px;">"Dance back rule"</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">description</td><td style="padding: 6px 12px;">text</td><td style="padding: 6px 12px;">Full rule details</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">tone</td><td style="padding: 6px 12px;">varchar(20)</td><td style="padding: 6px 12px;">playful | serious | ritual</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">consequence</td><td style="padding: 6px 12px;">text (nullable)</td><td style="padding: 6px 12px;">"Owes a massage"</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">points_value</td><td style="padding: 6px 12px;">integer</td><td style="padding: 6px 12px;">Default 10. How much following it earns</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">status</td><td style="padding: 6px 12px;">varchar(20)</td><td style="padding: 6px 12px;">proposed | active | archived</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">proposed_by</td><td style="padding: 6px 12px;">text FK → users</td><td style="padding: 6px 12px;">Who created/amended</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">accepted_by</td><td style="padding: 6px 12px;">text FK → users (nullable)</td><td style="padding: 6px 12px;">Null until partner accepts</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">accepted_at</td><td style="padding: 6px 12px;">timestamp (nullable)</td><td style="padding: 6px 12px;"></td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">ai_detectable</td><td style="padding: 6px 12px;">boolean</td><td style="padding: 6px 12px;">Can AI detect compliance from chat?</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">ai_detection_hint</td><td style="padding: 6px 12px;">text (nullable)</td><td style="padding: 6px 12px;">Prompt hint for AI detection</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">created_at</td><td style="padding: 6px 12px;">timestamp</td><td style="padding: 6px 12px;"></td></tr>
+        <tr><td style="padding: 6px 12px; font-weight: 600;">updated_at</td><td style="padding: 6px 12px;">timestamp</td><td style="padding: 6px 12px;"></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>rule_events</h3>
+  <div class="mockup">
+    <div class="mockup-header">Table: rule_events</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 2px solid #e8e0d8;">
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Column</th>
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Type</th>
+          <th style="text-align: left; padding: 6px 12px; color: #8b7355;">Notes</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">id</td><td style="padding: 6px 12px;">uuid PK</td><td style="padding: 6px 12px;"></td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">rule_group_id</td><td style="padding: 6px 12px;">uuid FK</td><td style="padding: 6px 12px;">Links to the rule (group, not version)</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">couple_id</td><td style="padding: 6px 12px;">uuid FK → couples</td><td style="padding: 6px 12px;">Denormalized for fast queries</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">type</td><td style="padding: 6px 12px;">varchar(20)</td><td style="padding: 6px 12px;">followed | broken | nudge</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">reported_by</td><td style="padding: 6px 12px;">text FK → users (nullable)</td><td style="padding: 6px 12px;">Null if AI-generated nudge</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">note</td><td style="padding: 6px 12px;">text (nullable)</td><td style="padding: 6px 12px;">"She started dancing and I joined!"</td></tr>
+        <tr style="border-bottom: 1px solid #f0e8e0;"><td style="padding: 6px 12px; font-weight: 600;">points</td><td style="padding: 6px 12px;">integer</td><td style="padding: 6px 12px;">+10 for followed, -5 for broken</td></tr>
+        <tr><td style="padding: 6px 12px; font-weight: 600;">created_at</td><td style="padding: 6px 12px;">timestamp</td><td style="padding: 6px 12px;"></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key Design Decisions</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="background: #f8f5f0; border-radius: 12px; padding: 16px;">
+      <strong style="color: #8b7355;">Versioning</strong>
+      <p style="margin: 8px 0 0; font-size: 14px;">rule_group_id stays same across amendments. Query latest version with <code>MAX(version) WHERE rule_group_id = X</code></p>
+    </div>
+    <div style="background: #f8f5f0; border-radius: 12px; padding: 16px;">
+      <strong style="color: #8b7355;">Streaks</strong>
+      <p style="margin: 8px 0 0; font-size: 14px;">Computed from rule_events. Count consecutive days with at least one "followed" event and no "broken" events.</p>
+    </div>
+    <div style="background: #f8f5f0; border-radius: 12px; padding: 16px;">
+      <strong style="color: #8b7355;">Couple Score</strong>
+      <p style="margin: 8px 0 0; font-size: 14px;">SUM(points) from rule_events for the couple. Cooperative — both partners share the total.</p>
+    </div>
+    <div style="background: #f8f5f0; border-radius: 12px; padding: 16px;">
+      <strong style="color: #8b7355;">AI Detection</strong>
+      <p style="margin: 8px 0 0; font-size: 14px;">ai_detectable + ai_detection_hint tell the coach what to look for in WhatsApp messages.</p>
+    </div>
+  </div>
+</div>

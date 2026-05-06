@@ -19,11 +19,22 @@ import { OnboardingCard } from './-components/onboarding-card'
 import { InstallBanner } from './-components/install-banner'
 import { PushOptIn } from './-components/push-opt-in'
 import { DailyCheckinCard } from './-components/daily-checkin-card'
+import { DailyCarePlanCard } from './-components/daily-care-plan-card'
+import { DailyConnectionQuestionCard } from './-components/daily-connection-question-card'
+import { ConversationAgreementCard } from './-components/conversation-agreement-card'
+import { HotMomentResetCard } from './-components/hot-moment-reset-card'
+import { MicroDatePlanCard } from './-components/micro-date-plan-card'
+import { RepairDebriefCard } from './-components/repair-debrief-card'
+import { RelationshipMoveCard } from './-components/relationship-move-card'
+import { RelationshipPracticeDeck } from './-components/relationship-practice-deck'
+import { RepairChoiceCard } from './-components/repair-choice-card'
+import { WeeklyResetRitual } from './-components/weekly-reset-ritual'
 import { getDailyCheckin } from '~/server/checkin'
 import {
   isUpgradeGateDetail,
   openUpgradeModal,
 } from '~/lib/upgrade-gate'
+import { useI18n } from '~/lib/i18n'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -49,6 +60,7 @@ function SoloOnboarding({ pendingRequests }: {
   pendingRequests: Awaited<ReturnType<typeof getPendingRequests>>
 }) {
   const router = useRouter()
+  const { t } = useI18n()
   const [processingId, setProcessingId] = useState<string | null>(null)
 
   const handleAccept = async (requestId: string) => {
@@ -129,7 +141,7 @@ function SoloOnboarding({ pendingRequests }: {
       <div className="text-center">
         <h1 className="font-display text-3xl text-warm-900 mb-2">Welcome to Amore</h1>
         <p className="text-warm-500 leading-relaxed">
-          Get started by talking to your coach or uploading a conversation for instant insights.
+          {t('Get started by talking to your coach or uploading a conversation for instant insights.')}
         </p>
       </div>
 
@@ -145,9 +157,9 @@ function SoloOnboarding({ pendingRequests }: {
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-warm-900 mb-1">Talk to your relationship coach</h3>
+            <h3 className="text-base font-semibold text-warm-900 mb-1">{t('Talk to your relationship coach')}</h3>
             <p className="text-sm text-warm-500 leading-relaxed">
-              Get personalized guidance on communication, conflict resolution, and relationship growth. No partner connection required.
+              {t('Get personalized guidance on communication, conflict resolution, and relationship growth. No partner connection required.')}
             </p>
           </div>
           <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-coral-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +241,9 @@ function DashboardPage() {
 
 function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useLoaderData>, { hasCouple: true }> }) {
   const router = useRouter()
+  const { locale, t } = useI18n()
   const [analyzing, setAnalyzing] = useState(false)
+  const [showQuickMood, setShowQuickMood] = useState(false)
   const [showMoodDetections, setShowMoodDetections] = useState(
     data.pendingMoodDetections.length > 0,
   )
@@ -246,7 +260,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
   const handleAnalyze = async () => {
     setAnalyzing(true)
     try {
-      const result = await triggerAnalysis()
+      const result = await triggerAnalysis({ data: { locale } })
       if (isUpgradeGateDetail(result)) {
         openUpgradeModal(result)
         setAnalyzing(false)
@@ -268,7 +282,10 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
       <InstallBanner />
       <PushOptIn />
-      <DailyCheckinCard data={data.dailyCheckin} />
+      <DailyCheckinCard
+        data={data.dailyCheckin}
+        partnerName={data.partner?.name ?? 'your partner'}
+      />
       <CoupleHero
         userName={data.userName}
         partnerName={data.partner?.name ?? null}
@@ -281,6 +298,62 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
         sentimentByDay={data.sentimentByDay}
       />
 
+      <RelationshipMoveCard
+        partnerName={data.partner?.name ?? 'your partner'}
+        healthScore={data.couple.healthScore}
+        messagesSinceAnalysis={data.couple.messagesSinceAnalysis}
+        hasGoals={data.activeGoals.length > 0}
+        partnerMoodSet={!!data.partnerMood}
+        onOpenCoach={(prompt) => {
+          if (prompt) {
+            window.localStorage.setItem('amore-coach-draft', prompt)
+          }
+          window.dispatchEvent(new CustomEvent('amore:open-coach'))
+        }}
+      />
+
+      <HotMomentResetCard />
+
+      <RepairChoiceCard partnerName={data.partner?.name ?? 'your partner'} />
+
+      <DailyCarePlanCard
+        partnerName={data.partner?.name ?? 'your partner'}
+        healthScore={data.couple.healthScore}
+        partnerMood={data.partnerMood}
+        partnerProfile={data.partnerProfile}
+        hasActiveGoals={data.activeGoals.length > 0}
+        onOpenCoach={(prompt) => {
+          window.localStorage.setItem('amore-coach-draft', prompt)
+          window.dispatchEvent(new CustomEvent('amore:open-coach'))
+        }}
+      />
+
+      <DailyConnectionQuestionCard
+        partnerName={data.partner?.name ?? 'your partner'}
+        healthScore={data.couple.healthScore}
+        partnerMood={data.partnerMood}
+        partnerInterests={data.partnerProfile?.interests}
+        onOpenCoach={(prompt) => {
+          window.localStorage.setItem('amore-coach-draft', prompt)
+          window.dispatchEvent(new CustomEvent('amore:open-coach'))
+        }}
+      />
+
+      <MicroDatePlanCard
+        partnerName={data.partner?.name ?? 'your partner'}
+        healthScore={data.couple.healthScore}
+        partnerMood={data.partnerMood}
+        partnerInterests={data.partnerProfile?.interests}
+      />
+
+      <RepairDebriefCard partnerName={data.partner?.name ?? 'your partner'} />
+
+      <ConversationAgreementCard partnerName={data.partner?.name ?? 'your partner'} />
+
+      <RelationshipPracticeDeck partnerName={data.partner?.name ?? 'your partner'} />
+
+      <WeeklyResetRitual partnerName={data.partner?.name ?? 'your partner'} />
+
       {data.couple.healthScore == null && (
         <OnboardingCard
           whatsappJid={data.couple.whatsappJid}
@@ -291,7 +364,33 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
         />
       )}
 
-      <MoodSelector onMoodSet={() => router.invalidate()} />
+      <section className="rounded-2xl border border-warm-200/70 bg-white/70 p-4 shadow-[0_1px_3px_rgba(42,33,24,0.04)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-warm-800">{t('Need your partner to know how you are right now?')}</p>
+            <p className="mt-0.5 text-sm text-warm-500">
+              {t('Use a quick mood only when today changes. Your daily check-in already updates your shared mood.')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuickMood((open) => !open)}
+            className="shrink-0 rounded-xl border border-coral-200 bg-coral-50 px-4 py-2 text-sm font-medium text-coral-700 transition-colors hover:bg-coral-100"
+          >
+            {showQuickMood ? t('Hide quick mood') : t('Share a quick mood')}
+          </button>
+        </div>
+        {showQuickMood && (
+          <div className="mt-4">
+            <MoodSelector
+              onMoodSet={() => {
+                setShowQuickMood(false)
+                router.invalidate()
+              }}
+            />
+          </div>
+        )}
+      </section>
 
       {data.activeCoaching.length > 0 && (
         <CoachingCard coaching={data.activeCoaching} />
@@ -303,7 +402,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InsightsCard insights={data.recentInsights} />
+        <InsightsCard insights={data.recentInsights} partnerName={data.partner?.name ?? null} />
         <GoalsCard goals={data.activeGoals} />
       </div>
 

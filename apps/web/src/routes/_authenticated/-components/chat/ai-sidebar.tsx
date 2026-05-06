@@ -1,6 +1,20 @@
+import { formatRelationshipLabel, getInterestLabel } from './relationship-context-format'
+import { buildInterestDraft, buildLoveLanguageDraft } from '../profile-action-draft'
+import { useI18n } from '~/lib/i18n'
+
 // --- Health Score Ring ---
 
-function SidebarHealthScore({ score }: { score: number | null }) {
+function SidebarHealthScore({
+  score,
+  partnerName,
+  onUseSuggestion,
+  locale,
+}: {
+  score: number | null
+  partnerName: string
+  onUseSuggestion: (text: string) => void
+  locale: 'en' | 'pt-BR'
+}) {
   const displayScore = score ?? 0
   const radius = 36
   const circumference = 2 * Math.PI * radius
@@ -45,8 +59,33 @@ function SidebarHealthScore({ score }: { score: number | null }) {
           </span>
         </div>
       </div>
+      {score !== null && (
+        <button
+          type="button"
+          onClick={() => onUseSuggestion(buildHealthScoreDraft(score, partnerName, locale))}
+          className="mt-3 w-full rounded-xl border border-warm-200 bg-white px-3 py-2 text-left text-xs font-semibold text-warm-700 transition-colors hover:border-coral-200 hover:bg-coral-50 hover:text-coral-700"
+        >
+          {score < 70 ? 'Draft repair check-in' : 'Draft care check-in'}
+        </button>
+      )}
     </div>
   )
+}
+
+export function buildHealthScoreDraft(score: number, partnerName: string, locale: 'en' | 'pt-BR' = 'en') {
+  if (locale === 'pt-BR') {
+    if (score < 70) {
+      return `Oi ${partnerName}, quero desacelerar e reparar em vez de deixar a distancia crescer.\n\nEu me importo em fazer isso ficar mais seguro para nos dois, nao em transformar a pontuacao em pressao.\n\nA gente poderia reservar 10 minutos hoje para nomear uma coisa que ficou pesada, uma parte que eu posso assumir e um reparo que realmente ajudaria? Quero assumir minha parte antes de tentar resolver.\n\nSe agora nao for um bom momento, podemos escolher um momento menor mais tarde hoje?`
+    }
+
+    return `Oi ${partnerName}, quero continuar cuidando da gente de proposito.\n\nA gente poderia nomear uma coisa que ajudou a gente a se sentir conectado esta semana e uma coisa pequena que ajudaria na proxima?\n\nSe um check-in completo parecer demais, podemos escolher so uma apreciacao e um proximo passo pequeno?`
+  }
+
+  if (score < 70) {
+    return `Hey ${partnerName}, I want to slow down and repair instead of letting distance build.\n\nI care about making this feel safer for both of us, not turning the score into pressure.\n\nCould we take 10 minutes today to name one thing that has felt heavy, one part I can own, and one repair that would actually help? I want to own my part before trying to solve.\n\nIf now is not a good time, could we choose a smaller moment later today?`
+  }
+
+  return `Hey ${partnerName}, I want to keep caring for us on purpose.\n\nCould we each name one thing that helped us feel connected this week and one small thing that would help next week?\n\nIf a full check-in feels like too much, could we just choose one appreciation and one tiny next step?`
 }
 
 // --- Mood Indicator ---
@@ -84,12 +123,13 @@ function MoodIndicator({
 // --- Coaching Tips ---
 
 function CoachingTips({ tips }: { tips: string[] }) {
+  const { t } = useI18n()
   if (tips.length === 0) return null
 
   return (
     <div className="bg-warm-100 rounded-2xl shadow-sm border border-warm-100 p-4">
       <h4 className="text-xs font-medium text-warm-500 mb-2">
-        Coaching Tips
+        {t('Coaching Tips')}
       </h4>
       <div className="space-y-2">
         {tips.map((tip, i) => (
@@ -187,29 +227,87 @@ function TensionAlert() {
   )
 }
 
-// --- Love Languages ---
+type ToolkitGuide = 'conflict' | 'space' | 'apology' | 'bid' | 'aftercare' | 'listen' | 'longing'
 
-function LoveLanguages({
-  languages,
+export function getToolkitGuides(score: number | null, tensionFlag: boolean): ToolkitGuide[] {
+  if (tensionFlag || (score !== null && score < 70)) {
+    return ['listen', 'longing', 'conflict', 'space', 'apology', 'bid', 'aftercare']
+  }
+
+  return ['listen', 'longing', 'conflict', 'bid', 'aftercare']
+}
+
+function ConversationToolkit({
+  healthScore,
+  tensionFlag,
 }: {
-  languages: Array<{ language: string; confidence: number }>
+  healthScore: number | null
+  tensionFlag: boolean
 }) {
-  if (languages.length === 0) return null
-
-  const sorted = [...languages].sort((a, b) => b.confidence - a.confidence)
+  const { t } = useI18n()
+  const guides = getToolkitGuides(healthScore, tensionFlag)
+  const labels: Record<ToolkitGuide, string> = {
+    conflict: 'Conflict map',
+    space: 'Space request',
+    apology: 'Apology guide',
+    bid: 'Missed bid',
+    aftercare: 'Aftercare plan',
+    listen: 'Listen first',
+    longing: 'Longing request',
+  }
 
   return (
     <div className="bg-warm-100 rounded-2xl shadow-sm border border-warm-100 p-4">
       <h4 className="text-xs font-medium text-warm-500 mb-2">
-        Love Languages
+        {t('Conversation Toolkit')}
+      </h4>
+      <div className="grid grid-cols-2 gap-1.5">
+        {guides.map((guide) => (
+          <button
+            key={guide}
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('amore:open-chat-guide', { detail: guide }))}
+            className="rounded-xl border border-warm-100 bg-white px-2.5 py-2 text-left text-xs font-semibold text-warm-700 transition-colors hover:border-coral-200 hover:bg-coral-50 hover:text-coral-700"
+          >
+            {t(labels[guide])}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// --- Love Languages ---
+
+function LoveLanguages({
+  languages,
+  partnerName,
+  onUseSuggestion,
+  locale,
+}: {
+  languages: Array<{ language: string; confidence: number }>
+  partnerName: string
+  onUseSuggestion: (text: string) => void
+  locale: 'en' | 'pt-BR'
+}) {
+  const { t } = useI18n()
+  if (languages.length === 0) return null
+
+  const sorted = [...languages].sort((a, b) => b.confidence - a.confidence)
+  const topLanguage = sorted[0]?.language ? formatRelationshipLabel(sorted[0].language, locale) : null
+
+  return (
+    <div className="bg-warm-100 rounded-2xl shadow-sm border border-warm-100 p-4">
+      <h4 className="text-xs font-medium text-warm-500 mb-2">
+        {t('Love Languages')}
       </h4>
       <div className="space-y-2">
         {sorted.map((lang) => {
           const pct = Math.round(lang.confidence * 100)
           return (
             <div key={lang.language} className="flex items-center gap-2">
-              <span className="text-xs text-warm-600 w-28 shrink-0 truncate capitalize">
-                {lang.language.replace(/_/g, ' ')}
+              <span className="text-xs text-warm-600 w-28 shrink-0 truncate">
+                {formatRelationshipLabel(lang.language, locale)}
               </span>
               <div className="flex-1 h-1.5 bg-warm-100 rounded-full overflow-hidden">
                 <div
@@ -224,14 +322,35 @@ function LoveLanguages({
           )
         })}
       </div>
+      {topLanguage && (
+        <button
+          type="button"
+          onClick={() => onUseSuggestion(buildLoveLanguageDraft(partnerName, topLanguage, locale))}
+          className="mt-3 w-full rounded-xl border border-coral-200 bg-coral-50 px-3 py-2 text-left text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-100"
+        >
+          {t('Plan care in chat')}
+        </button>
+      )}
     </div>
   )
 }
 
 // --- Partner Interests ---
 
-function PartnerInterests({ interests }: { interests: string[] }) {
+function PartnerInterests({
+  interests,
+  partnerName,
+  onUseSuggestion,
+  locale,
+}: {
+  interests: unknown[]
+  partnerName: string
+  onUseSuggestion: (text: string) => void
+  locale: 'en' | 'pt-BR'
+}) {
   if (interests.length === 0) return null
+
+  const visibleInterests = interests.map(getInterestLabel).filter(Boolean).slice(0, 10)
 
   return (
     <div className="bg-warm-100 rounded-2xl shadow-sm border border-warm-100 p-4">
@@ -239,15 +358,22 @@ function PartnerInterests({ interests }: { interests: string[] }) {
         Partner Interests
       </h4>
       <div className="flex flex-wrap gap-1.5">
-        {interests.map((interest, idx) => (
-          <span
+        {visibleInterests.map((interest, idx) => (
+          <button
             key={idx}
-            className="text-xs px-2 py-0.5 rounded-full bg-coral-50 text-coral-600"
+            type="button"
+            onClick={() => onUseSuggestion(buildInterestDraft(partnerName, interest, locale))}
+            className="text-xs px-2 py-0.5 rounded-full bg-coral-50 text-coral-600 transition-colors hover:bg-coral-100 hover:text-coral-700"
           >
-            {typeof interest === 'string' ? interest : String(interest)}
-          </span>
+            {interest}
+          </button>
         ))}
       </div>
+      {interests.length > visibleInterests.length && (
+        <p className="mt-2 text-[10px] text-warm-400">
+          {interests.length - visibleInterests.length} more saved in discoveries.
+        </p>
+      )}
     </div>
   )
 }
@@ -311,10 +437,11 @@ interface AISidebarProps {
   aiError: string | null
   totalMessages: number
   onUseSuggestion: (text: string) => void
+  partnerName?: string | null
   partnerProfile: {
     loveLanguages?: Array<{ language: string; confidence: number }> | null
     communicationStyle?: Record<string, Record<string, number>> | null
-    interests?: string[] | null
+    interests?: unknown[] | null
   } | null
   recentInsights: Array<{
     id: string
@@ -336,11 +463,14 @@ export function AISidebar({
   aiError,
   totalMessages,
   onUseSuggestion,
+  partnerName,
   partnerProfile,
   recentInsights,
 }: AISidebarProps) {
+  const { locale } = useI18n()
   const loveLanguages = partnerProfile?.loveLanguages ?? []
   const interests = partnerProfile?.interests ?? []
+  const displayPartnerName = partnerName || 'your partner'
 
   // Show persisted coaching tips when no live coaching exists
   const persistedCoachingTips = (recentInsights ?? [])
@@ -383,7 +513,17 @@ export function AISidebar({
 
         {tensionFlag && <TensionAlert />}
 
-        <SidebarHealthScore score={healthScore} />
+        <SidebarHealthScore
+          score={healthScore}
+          partnerName={displayPartnerName}
+          onUseSuggestion={onUseSuggestion}
+          locale={locale}
+        />
+
+        <ConversationToolkit
+          healthScore={healthScore}
+          tensionFlag={tensionFlag}
+        />
 
         <MoodIndicator mood={mood} loading={moodLoading} />
 
@@ -395,9 +535,19 @@ export function AISidebar({
 
         <CoachingTips tips={displayCoaching} />
 
-        <LoveLanguages languages={loveLanguages} />
+        <LoveLanguages
+          languages={loveLanguages}
+          partnerName={displayPartnerName}
+          onUseSuggestion={onUseSuggestion}
+          locale={locale}
+        />
 
-        <PartnerInterests interests={interests} />
+        <PartnerInterests
+          interests={interests}
+          partnerName={displayPartnerName}
+          onUseSuggestion={onUseSuggestion}
+          locale={locale}
+        />
 
         {!hasAnyData && !suggestionsLoading && !moodLoading && (
           <ZeroState messageCount={totalMessages} />

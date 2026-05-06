@@ -1,5 +1,6 @@
 import { getClient } from './client'
 import { AI_MODEL, MAX_ANALYSIS_MESSAGES, parseValidatedResponse, withRetry } from './config'
+import { getAILocaleInstruction, type AILocale } from './locale'
 import { analysisResultSchema } from './schemas'
 import type { Message } from '@amore-couples/types'
 
@@ -18,6 +19,7 @@ export interface AnalysisResult {
 export async function analyzeConversation(
   messages: Message[],
   userSenderName: string,
+  locale: AILocale = 'en',
 ): Promise<AnalysisResult> {
   const client = getClient()
 
@@ -38,7 +40,7 @@ export async function analyzeConversation(
 - summary: 2-3 sentence summary of communication health
 
 The user's name is "${userSenderName}". The other person is their partner.
-Return ONLY valid JSON, no markdown.`,
+Return ONLY valid JSON, no markdown.${getAILocaleInstruction(locale)}`,
       messages: [
         { role: 'user', content: `Analyze this couple's conversation:\n\n${chatText}` },
       ],

@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import type { InferSelectModel } from 'drizzle-orm'
+import { useCallback, useEffect, useState } from 'react'
+import type { coupleGoals } from '@amore-couples/db/schema'
 import {
   getActiveGoals,
   getCompletedGoals,
@@ -8,6 +10,21 @@ import {
   dismissGoal,
   getAISuggestedGoals,
 } from '~/server/goals'
+import {
+  buildGoalCelebrationDraft,
+  buildGoalDiscussionDraft,
+  buildGoalMidweekCheckInDraft,
+  buildGoalRenegotiationDraft,
+  buildGoalSlipRepairDraft,
+  buildGoalSupportPlanDraft,
+  buildGoalTodayDraft,
+  buildCareSwapInviteDraft,
+  buildChangedBehaviorApologyInviteDraft,
+  formatGoalDueDate,
+  parseStoredGoalDraft,
+} from './-goal-draft'
+import { useI18n } from '~/lib/i18n'
+import { storeChatDraft } from '~/lib/chat-draft-storage'
 
 export const Route = createFileRoute('/_authenticated/goals')({
   loader: async ({ context }) => {
@@ -31,28 +48,110 @@ interface GoalSuggestion {
   reason: string
 }
 
+type CoupleGoal = InferSelectModel<typeof coupleGoals>
+type CoupleGoalsData = {
+  hasCouple: true
+  active: CoupleGoal[]
+  completed: CoupleGoal[]
+}
+
+function getTinyGoalTemplates(locale: 'en' | 'pt-BR') {
+  if (locale === 'pt-BR') {
+    return [
+      {
+        title: 'Uma mensagem de apreciacao todos os dias',
+        description: 'Envie uma apreciacao especifica por dia. Mantenha concreto: o que voce percebeu, por que importou e como fez voce se sentir.',
+        chatDraft: 'Quero que a gente tente uma pratica pequena do relacionamento nesta semana: uma mensagem especifica de apreciacao por dia. Nada grande, so uma coisa que percebemos e valorizamos.',
+      },
+      {
+        title: 'Uma conversa sem celular nesta semana',
+        description: 'Escolham uma janela de 20 minutos sem celulares, sem consertar e sem multitarefa. So perguntar o que foi bom e o que foi dificil.',
+        chatDraft: 'Podemos escolher uma janela de 20 minutos sem celular nesta semana? Sem consertar, sem multitarefa. So o que foi bom, o que foi dificil e o que ajudaria a gente a se sentir mais perto.',
+      },
+      {
+        title: 'Reparar tensao em ate 24 horas',
+        description: 'Quando algo ficar mal resolvido, comecar com apreciacao, assumir uma parte e perguntar para entender antes de se defender.',
+        chatDraft: 'Podemos fazer uma pequena promessa nesta semana? Se algo ficar mal resolvido, tentamos reparar em ate 24 horas: apreciacao primeiro, assumir uma parte e depois perguntar para entender.',
+      },
+      {
+        title: 'Uma troca de cuidado nesta semana',
+        description: 'Cada pessoa nomeia um pequeno pedido de apoio pratico e uma oferta de apoio para que o cuidado fique explicito em vez de adivinhado.',
+        chatDraft: buildCareSwapInviteDraft(locale),
+      },
+      {
+        title: 'Um pedido de desculpas com mudanca',
+        description: 'Assumir um impacto especifico, nomear o comportamento que vai mudar e perguntar se o reparo realmente chegaria.',
+        chatDraft: buildChangedBehaviorApologyInviteDraft(locale),
+      },
+    ]
+  }
+
+  return [
+  {
+    title: 'One appreciation message every day',
+    description: 'Send one specific appreciation each day. Keep it concrete: what you noticed, why it mattered, and how it made you feel.',
+    chatDraft: 'I want us to try one tiny relationship practice this week: one specific appreciation message each day. Nothing big, just one thing we noticed and valued.',
+  },
+  {
+    title: 'One phone-free conversation this week',
+    description: 'Pick one 20-minute window with no phones, no fixing, and no multitasking. Just ask what felt good and what felt hard.',
+    chatDraft: 'Could we pick one 20-minute phone-free window this week? No fixing, no multitasking. Just what felt good, what felt hard, and what would help us feel closer.',
+  },
+  {
+    title: 'Repair tension within 24 hours',
+    description: 'When something feels unresolved, start with appreciation, own one part, and ask to understand before defending.',
+    chatDraft: 'Can we make a small promise this week? If something feels unresolved, we try to repair within 24 hours: appreciation first, own one part, then ask to understand.',
+  },
+  {
+    title: 'One care swap this week',
+    description: 'Each person names one small practical support request and one support offer so care becomes explicit instead of guessed.',
+    chatDraft: buildCareSwapInviteDraft(),
+  },
+  {
+    title: 'One apology with changed behavior',
+    description: 'Own one specific impact, name the behavior that will change, and ask whether the repair would actually land.',
+    chatDraft: buildChangedBehaviorApologyInviteDraft(locale),
+  },
+]
+}
+
+function oneWeekFromToday(): string {
+  const date = new Date()
+  date.setDate(date.getDate() + 7)
+  return date.toISOString().slice(0, 10)
+}
+
 // ── Page Component ──────────────────────────────────────
 
 function GoalsPage() {
   const data = Route.useLoaderData()
 
   if (!data.hasCouple) {
-    return (
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-3xl text-warm-900">Goals</h1>
-            <p className="text-warm-500 mt-1">Things you want to work on together</p>
-          </div>
-        </div>
-        <div className="bg-warm-100 rounded-2xl p-8 text-center">
-          <p className="text-warm-500 mb-4">Connect with your partner to set shared goals.</p>
-          <Link to="/connect" className="text-coral-500 font-medium hover:underline">Connect now</Link>
-        </div>
-      </div>
-    )
+    return <GoalsEmptyState />
   }
 
+  return <CoupleGoalsPage data={data} />
+}
+
+function GoalsEmptyState() {
+  return (
+    <div className="max-w-2xl mx-auto px-6 py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-display text-3xl text-warm-900">Goals</h1>
+          <p className="text-warm-500 mt-1">Things you want to work on together</p>
+        </div>
+      </div>
+      <div className="bg-warm-100 rounded-2xl p-8 text-center">
+        <p className="text-warm-500 mb-4">Connect with your partner to set shared goals.</p>
+        <Link to="/connect" className="text-coral-500 font-medium hover:underline">Connect now</Link>
+      </div>
+    </div>
+  )
+}
+
+function CoupleGoalsPage({ data }: { data: CoupleGoalsData }) {
+  const { locale, t } = useI18n()
   const [activeGoals, setActiveGoals] = useState(data.active)
   const [completedGoals, setCompletedGoals] = useState(data.completed)
   const [showCompleted, setShowCompleted] = useState(false)
@@ -61,12 +160,41 @@ function GoalsPage() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [recentlyCompletedGoal, setRecentlyCompletedGoal] = useState<(typeof data.active)[number] | null>(null)
 
   // ── Add Goal Form State ─────────────────────────────
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const applyStoredGoalDraft = useCallback(() => {
+    const draft = window.localStorage.getItem('amore-goal-draft')
+    if (!draft) return
+
+    window.localStorage.removeItem('amore-goal-draft')
+    const storedGoal = parseStoredGoalDraft(draft, oneWeekFromToday())
+    setTitle(storedGoal.title)
+    setDescription(storedGoal.description)
+    setDueDate(storedGoal.dueDate)
+    setShowAddForm(true)
+  }, [])
+
+  useEffect(() => {
+    applyStoredGoalDraft()
+
+    const checkAfterClick = () => {
+      window.setTimeout(applyStoredGoalDraft, 0)
+    }
+
+    window.addEventListener('amore:goal-draft-ready', applyStoredGoalDraft)
+    window.addEventListener('click', checkAfterClick)
+
+    return () => {
+      window.removeEventListener('amore:goal-draft-ready', applyStoredGoalDraft)
+      window.removeEventListener('click', checkAfterClick)
+    }
+  }, [applyStoredGoalDraft])
 
   const handleAddGoal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,6 +230,7 @@ function GoalsPage() {
       const goal = activeGoals.find((g) => g.id === goalId)
       setActiveGoals((prev) => prev.filter((g) => g.id !== goalId))
       if (goal) {
+        setRecentlyCompletedGoal(goal)
         setCompletedGoals((prev) => [
           { ...goal, status: 'completed' },
           ...prev,
@@ -164,6 +293,27 @@ function GoalsPage() {
     setSuggestions((prev) => prev.filter((s) => s.title !== suggestion.title))
   }
 
+  const tinyGoalTemplates = getTinyGoalTemplates(locale)
+
+  const handleCreateTemplate = async (template: ReturnType<typeof getTinyGoalTemplates>[number]) => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      const result = await createGoal({
+        data: {
+          title: template.title,
+          description: template.description,
+          dueDate: oneWeekFromToday(),
+        },
+      })
+      setActiveGoals((prev) => [result.goal, ...prev])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create goal')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       {/* Header */}
@@ -176,17 +326,93 @@ function GoalsPage() {
         </div>
         <Link
           to="/dashboard"
+          search={{ upgraded: false }}
           className="text-sm text-warm-500 hover:text-warm-700 transition-colors"
         >
           Back to Dashboard
         </Link>
       </div>
 
+      {/* Tiny Goal Templates */}
+      <section className="mb-6 rounded-2xl border border-sage-500/15 bg-sage-50 p-5">
+        <div className="mb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-sage-500">
+            Start tiny
+          </p>
+          <h2 className="font-display text-xl text-warm-900">
+            Choose one couple practice for this week
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-warm-600">
+            The best goal is small enough to do even on a busy day.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {tinyGoalTemplates.map((template) => (
+            <div
+              key={template.title}
+              className="rounded-2xl border border-warm-200 bg-white/80 p-4 transition-colors hover:border-sage-500/40 hover:bg-white"
+            >
+              <p className="text-sm font-semibold text-warm-900">{template.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-warm-500">{template.description}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCreateTemplate(template)}
+                  disabled={submitting}
+                  className="rounded-lg bg-sage-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  Create for this week
+                </button>
+                <Link
+                  to="/chat"
+                  onClick={() => storeChatDraft(template.chatDraft, locale)}
+                  className="rounded-lg border border-sage-500/20 bg-white px-3 py-1.5 text-xs font-semibold text-sage-600 transition-colors hover:bg-sage-50"
+                >
+                  Invite partner first
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Error */}
       {error && (
         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
           {error}
         </div>
+      )}
+
+      {recentlyCompletedGoal && (
+        <section className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+            Goal completed
+          </p>
+          <h2 className="mt-1 font-display text-xl text-warm-900">
+            Celebrate what worked before moving on
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-warm-600">
+            You completed {recentlyCompletedGoal.title}. Turn it into one moment of appreciation and learning together.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              to="/chat"
+              onClick={() => {
+                storeChatDraft(buildGoalCelebrationDraft(recentlyCompletedGoal, locale), locale)
+              }}
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+            >
+              Celebrate in chat
+            </Link>
+            <button
+              type="button"
+              onClick={() => setRecentlyCompletedGoal(null)}
+              className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+            >
+              Dismiss
+            </button>
+          </div>
+        </section>
       )}
 
       {/* Action Buttons */}
@@ -381,13 +607,65 @@ function GoalsPage() {
                     )}
                     {goal.dueDate && (
                       <span className="text-[10px] text-warm-400">
-                        Due{' '}
-                        {new Date(goal.dueDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {t('Due')} {formatGoalDueDate(goal.dueDate, locale)}
                       </span>
                     )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalDiscussionDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-sage-500/20 bg-sage-50 px-3 py-1.5 text-xs font-semibold text-sage-700 transition-colors hover:bg-sage-100"
+                    >
+                      Discuss in chat
+                    </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalTodayDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-coral-200 bg-coral-50 px-3 py-1.5 text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-100"
+                    >
+                      Do today
+                    </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalMidweekCheckInDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-coral-200 bg-coral-50 px-3 py-1.5 text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-100"
+                    >
+                      Check progress
+                    </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalSupportPlanDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100"
+                    >
+                      Plan support
+                    </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalRenegotiationDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+                    >
+                      Make easier
+                    </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalSlipRepairDraft(goal, locale), locale)
+                      }}
+                      className="inline-flex rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                    >
+                      Repair slip
+                    </Link>
                   </div>
                 </div>
                 <button
@@ -463,6 +741,15 @@ function GoalsPage() {
                         {goal.description}
                       </p>
                     )}
+                    <Link
+                      to="/chat"
+                      onClick={() => {
+                        storeChatDraft(buildGoalCelebrationDraft(goal, locale), locale)
+                      }}
+                      className="mt-2 inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                    >
+                      Celebrate in chat
+                    </Link>
                   </div>
                 </li>
               ))}

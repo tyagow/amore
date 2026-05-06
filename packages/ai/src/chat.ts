@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { getClient } from './client'
 import { AI_MODEL, FAST_MODEL, parseValidatedResponse, withRetry } from './config'
+import { getAILocaleInstruction, type AILocale } from './locale'
 
 export interface ChatMessage {
   sender: string
@@ -62,6 +63,7 @@ export async function generateReplySuggestions(
     loveLanguages?: Array<{ language: string; confidence: number }> | null
     communicationStyle?: Record<string, Record<string, number>> | null
   } | null,
+  locale: AILocale = 'en',
 ): Promise<string[]> {
   const recent = messages.slice(-15)
   const conversation = formatConversation(recent)
@@ -71,7 +73,7 @@ export async function generateReplySuggestions(
     const response = await getClient().messages.create({
       model: FAST_MODEL,
       max_tokens: 300,
-      system: `You are a couple's communication assistant. Generate 2-3 short reply suggestions that match the conversation's tone and the partner's communication style. Output a JSON array of strings. Each suggestion should be natural, warm, and contextually appropriate. Do not include any text outside the JSON array.${profileContext}`,
+      system: `You are a couple's communication assistant. Generate 2-3 short reply suggestions that match the conversation's tone and the partner's communication style. Output a JSON array of strings. Each suggestion should be natural, warm, and contextually appropriate. Do not include any text outside the JSON array.${profileContext}${getAILocaleInstruction(locale)}`,
       messages: [
         {
           role: 'user',
@@ -98,6 +100,7 @@ export async function analyzeLiveMood(
     loveLanguages?: Array<{ language: string; confidence: number }> | null
     recentInsights?: string[] | null
   },
+  locale: AILocale = 'en',
 ): Promise<{ mood: string; coaching: string[]; tensionFlag: boolean }> {
   const recent = messages.slice(-20)
   const conversation = formatConversation(recent)
@@ -122,7 +125,7 @@ export async function analyzeLiveMood(
 - "mood": an emoji followed by a short label (e.g. "Warm & Connected", "Tense & Distant")
 - "coaching": an array of 1-2 short, actionable coaching tips for improving the conversation
 - "tensionFlag": true if you detect tension, conflict, or emotional distance; false otherwise
-Do not include any text outside the JSON object.`,
+Do not include any text outside the JSON object.${getAILocaleInstruction(locale)}`,
       messages: [
         {
           role: 'user',
@@ -150,6 +153,7 @@ export async function reviewMessageTone(
     loveLanguages?: Array<{ language: string; confidence: number }> | null
     communicationStyle?: Record<string, Record<string, number>> | null
   } | null,
+  locale: AILocale = 'en',
 ): Promise<{ tone: string; suggestions: string[]; revised: string }> {
   const recent = recentMessages.slice(-10)
   const conversation = formatConversation(recent)
@@ -163,7 +167,7 @@ export async function reviewMessageTone(
 - "tone": a short label describing the tone of the draft (e.g. "Defensive", "Warm & supportive", "Passive-aggressive")
 - "suggestions": an array of specific tips to improve the message's tone and effectiveness
 - "revised": an improved version of the draft that applies your suggestions while preserving the original intent
-Do not include any text outside the JSON object.${profileContext}`,
+Do not include any text outside the JSON object.${profileContext}${getAILocaleInstruction(locale)}`,
       messages: [
         {
           role: 'user',

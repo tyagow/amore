@@ -13,13 +13,14 @@ import { eq, and, desc, gte } from 'drizzle-orm'
 import { generateMoodCoaching, type CoachingTip } from '@amore-couples/ai'
 
 // ── Server Functions ────────────────────────────────────
+const localeSchema = z.enum(['en', 'pt-BR']).default('en')
 
 /**
  * Generate AI coaching tips when a partner sets their mood to an alert level.
  * Fetches context (profiles, recent messages) and stores the result as an insight.
  */
 export const generateMoodCoachingTips = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ moodStateId: z.string() }))
+  .inputValidator(z.object({ moodStateId: z.string(), locale: localeSchema }))
   .handler(async ({ data }) => {
     const { session, couple, partnerId } = await requireCouple()
 
@@ -70,17 +71,20 @@ export const generateMoodCoachingTips = createServerFn({ method: 'POST' })
       .map((m) => m.text!)
 
     // Generate coaching tips via AI
-    const tips = await generateMoodCoaching({
-      moodLevel: moodState.mood,
-      moodNote: moodState.note,
-      alertPartnerName: alertUser?.name ?? 'Your partner',
-      recipientName: recipientUser?.name ?? 'You',
-      profiles: profiles.map((p) => ({
-        loveLanguages: p.loveLanguages,
-        communicationStyle: p.communicationStyle,
-      })),
-      recentMessages: messageSummaries,
-    })
+    const tips = await generateMoodCoaching(
+      {
+        moodLevel: moodState.mood,
+        moodNote: moodState.note,
+        alertPartnerName: alertUser?.name ?? 'Your partner',
+        recipientName: recipientUser?.name ?? 'You',
+        profiles: profiles.map((p) => ({
+          loveLanguages: p.loveLanguages,
+          communicationStyle: p.communicationStyle,
+        })),
+        recentMessages: messageSummaries,
+      },
+      data.locale,
+    )
 
     // Store as an insight with type 'coaching_tip'
     const [inserted] = await db

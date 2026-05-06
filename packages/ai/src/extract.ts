@@ -1,5 +1,6 @@
 import { getClient } from './client'
 import { AI_MODEL, MAX_EXTRACT_MESSAGES, parseValidatedResponse, withRetry } from './config'
+import { getAILocaleInstruction, type AILocale } from './locale'
 import { extractedEntitiesSchema } from './schemas'
 import type { Message } from '@amore-couples/types'
 
@@ -12,6 +13,7 @@ export interface ExtractedEntities {
 
 export async function extractEntities(
   messages: Message[],
+  locale: AILocale = 'en',
 ): Promise<ExtractedEntities> {
   const client = getClient()
 
@@ -32,7 +34,7 @@ export async function extractEntities(
 - loveLanguages: detected love languages with confidence (0-1)
 
 Love languages: words_of_affirmation, quality_time, receiving_gifts, acts_of_service, physical_touch
-Return ONLY valid JSON, no markdown.`,
+Return ONLY valid JSON, no markdown.${getAILocaleInstruction(locale)}`,
       messages: [
         { role: 'user', content: chatText },
       ],

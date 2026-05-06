@@ -1,5 +1,13 @@
+import { Link } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import type { getInsightsData } from '~/server/insights'
+import {
+  buildEmotionalResetDraft,
+  buildEmotionalResetGoalDraft,
+  getEmotionalResetSignal,
+} from './emotion-actions'
+import { useI18n } from '~/lib/i18n'
+import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
 
 type InsightsData = Awaited<ReturnType<typeof getInsightsData>>
 
@@ -314,6 +322,50 @@ function EmptyState({ message }: { message: string }) {
 
 // ── Main component ───────────────────────────────────────────────────────
 
+function EmotionalResetMove({ data }: { data: InsightsData }) {
+  const { locale, t } = useI18n()
+  const signal = getEmotionalResetSignal({
+    sentimentByDay: data.sentimentByDay,
+    moodHistory: data.moodHistory,
+    userId: data.userId,
+    partnerName: data.partner?.name ?? undefined,
+  })
+  const chatDraft = buildEmotionalResetDraft(signal, locale)
+  const goalDraft = buildEmotionalResetGoalDraft(signal, locale)
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sage-500">
+            {t('Emotional reset')}
+          </p>
+          <h3 className="mt-1 font-display text-lg text-warm-800">{signal.title}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-warm-500">
+            {t(signal.detail)} {t('Turn it into one gentle check-in instead of waiting for tension to build.')}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            to="/chat"
+            onClick={() => storeChatDraft(chatDraft, locale)}
+            className="rounded-lg bg-sage-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sage-700"
+          >
+            {t('Open in chat')}
+          </Link>
+          <Link
+            to="/goals"
+            onClick={() => storeGoalDraft(goalDraft, locale)}
+            className="rounded-lg border border-sage-200 bg-white px-3 py-2 text-xs font-semibold text-sage-700 transition-colors hover:bg-sage-50"
+          >
+            {t('Make it a goal')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function EmotionsTab({ data }: { data: InsightsData }) {
   const hasSentiment = data.sentimentByDay.length >= 2
   const hasMoods = data.moodHistory.length > 0
@@ -332,6 +384,8 @@ export function EmotionsTab({ data }: { data: InsightsData }) {
 
   return (
     <div className="space-y-6">
+      <EmotionalResetMove data={data} />
+
       {/* Sentiment Trend Chart */}
       {hasSentiment && (
         <div className="bg-white rounded-2xl p-6 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)]">

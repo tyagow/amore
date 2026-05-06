@@ -57,6 +57,10 @@ body::before {
 }
 .animate-in { animation: fadeUp 0.5s ease-out both; }
 
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
 /* Mood bounce animation */
 @keyframes moodBounce {
   0% { transform: scale(1); }

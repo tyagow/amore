@@ -1,3 +1,5 @@
+import { useI18n } from '~/lib/i18n'
+
 interface CommBalanceProps {
   youPercent: number
   partnerPercent: number
@@ -5,6 +7,7 @@ interface CommBalanceProps {
 }
 
 export function CommBalance({ youPercent, partnerPercent, className }: CommBalanceProps) {
+  const { t } = useI18n()
   const total = youPercent + partnerPercent
   const youPct = total > 0 ? Math.round((youPercent / total) * 100) : 50
   const partnerPct = 100 - youPct
@@ -43,10 +46,10 @@ export function CommBalance({ youPercent, partnerPercent, className }: CommBalan
         </g>
       </svg>
       <div className="flex items-center gap-3 text-[10px] text-warm-500">
-        <span>{youPct}% you</span>
-        <span>{partnerPct}% partner</span>
+        <span>{youPct}% {t('you')}</span>
+        <span>{partnerPct}% {t('partner')}</span>
       </div>
-      <p className="text-[10px] font-medium text-warm-600">{label}</p>
+      <p className="text-[10px] font-medium text-warm-600">{t(label)}</p>
     </div>
   )
 }

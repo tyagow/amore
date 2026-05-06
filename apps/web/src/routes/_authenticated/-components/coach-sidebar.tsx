@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCoach } from '~/hooks/use-coach'
+import { useI18n, type Locale } from '~/lib/i18n'
 
-function formatThreadDate(value: string): string {
+function formatThreadDate(value: string, locale: Locale): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
     month: 'short',
     day: 'numeric',
   }).format(date)
@@ -55,6 +56,7 @@ function ThreadList({
   onDelete: (threadId: string) => void
   onNew: () => void
 }) {
+  const { locale, t } = useI18n()
   return (
     <div className="flex h-full flex-col">
       <div className="px-3 py-3">
@@ -62,7 +64,7 @@ function ThreadList({
           onClick={onNew}
           className="w-full rounded-2xl bg-coral-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-coral-600"
         >
-          New conversation
+          {t('New conversation')}
         </button>
       </div>
 
@@ -85,16 +87,16 @@ function ThreadList({
                   className="min-w-0 flex-1 text-left"
                 >
                   <div className="truncate text-sm font-medium text-warm-800">
-                    {thread.title || 'Untitled conversation'}
+                    {thread.title || t('Untitled conversation')}
                   </div>
                   <div className="mt-1 text-xs text-warm-400">
-                    Updated {formatThreadDate(thread.updatedAt)}
+                    {t('Updated')} {formatThreadDate(thread.updatedAt, locale)}
                   </div>
                 </button>
                 <button
                   onClick={() => onDelete(thread.id)}
                   className="rounded-full p-1 text-warm-400 transition-colors hover:bg-white hover:text-red-500"
-                  aria-label="Delete conversation"
+                  aria-label={t('Delete conversation')}
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
@@ -107,8 +109,8 @@ function ThreadList({
 
         {threads.length === 0 && (
           <div className="rounded-3xl border border-dashed border-warm-200 bg-white/70 px-5 py-10 text-center">
-            <p className="text-sm font-medium text-warm-700">No coach conversations yet</p>
-            <p className="mt-1 text-xs text-warm-400">Start one and the coach will keep the thread history here.</p>
+            <p className="text-sm font-medium text-warm-700">{t('No coach conversations yet')}</p>
+            <p className="mt-1 text-xs text-warm-400">{t('Start one and the coach will keep the thread history here.')}</p>
           </div>
         )}
       </div>
@@ -125,6 +127,7 @@ function NudgeBanner({
   onDismiss: () => void
   onEngage: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="mx-3 mt-3 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
       <div className="flex items-start gap-3">
@@ -134,20 +137,20 @@ function NudgeBanner({
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-amber-900">Coach nudge</p>
+          <p className="text-sm font-medium text-amber-900">{t('Coach nudge')}</p>
           <p className="mt-1 text-sm leading-5 text-amber-800">{nudge.message}</p>
           <div className="mt-3 flex gap-2">
             <button
               onClick={onEngage}
               className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-amber-600"
             >
-              Talk about it
+              {t('Talk about it')}
             </button>
             <button
               onClick={onDismiss}
               className="rounded-full px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
             >
-              Dismiss
+              {t('Dismiss')}
             </button>
           </div>
         </div>
@@ -196,6 +199,72 @@ function SuggestionChips({
   )
 }
 
+const QUICK_COACH_PROMPTS = [
+  {
+    label: 'Prepare repair',
+    prompt: 'Help me prepare a calm repair conversation. I want to start with appreciation, own my part, and ask to understand without sounding defensive.',
+    labelPt: 'Preparar reparo',
+    promptPt: 'Me ajude a preparar uma conversa calma de reparo. Quero comecar com apreciacao, assumir minha parte e perguntar para entender sem soar defensivo(a).',
+  },
+  {
+    label: 'Ask a better question',
+    prompt: 'Give me three gentle questions I can ask my partner today that invite honesty without pressure.',
+    labelPt: 'Pergunta melhor',
+    promptPt: 'Me de tres perguntas gentis que eu possa fazer hoje para convidar honestidade sem pressao.',
+  },
+  {
+    label: 'Choose one goal',
+    prompt: 'Help me choose one tiny relationship goal for this week that is specific enough to actually do.',
+    labelPt: 'Escolher uma meta',
+    promptPt: 'Me ajude a escolher uma meta pequena de relacionamento para esta semana que seja especifica o bastante para realmente fazer.',
+  },
+  {
+    label: 'Own my part',
+    prompt: 'Help me write a message where I own my part without over-apologizing or making it about my guilt.',
+    labelPt: 'Assumir minha parte',
+    promptPt: 'Me ajude a escrever uma mensagem em que eu assumo minha parte sem pedir desculpas demais nem transformar isso na minha culpa.',
+  },
+  {
+    label: 'Plan apology',
+    prompt: 'Help me prepare a clear apology that names what I did, the impact I can see, what I own, and one repair ask without defending myself.',
+    labelPt: 'Planejar desculpa',
+    promptPt: 'Me ajude a preparar um pedido de desculpas claro que nomeie o que eu fiz, o impacto que consigo ver, o que assumo e um pedido de reparo sem me defender.',
+  },
+  {
+    label: 'Build appreciation',
+    prompt: 'Help me write a specific appreciation that names what I noticed, what it showed me about my partner, and how it made me feel.',
+    labelPt: 'Criar apreciacao',
+    promptPt: 'Me ajude a escrever uma apreciacao especifica que nomeie o que percebi, o que isso me mostrou sobre minha parceria e como me fez sentir.',
+  },
+]
+
+function QuickCoachPrompts({
+  onSelect,
+}: {
+  onSelect: (text: string) => void
+}) {
+  const { locale, t } = useI18n()
+  return (
+    <div className="px-3 pb-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warm-400">
+        {t('Start with a hard thing')}
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {QUICK_COACH_PROMPTS.map((prompt) => (
+          <button
+            key={prompt.label}
+            type="button"
+            onClick={() => onSelect(locale === 'pt-BR' ? prompt.promptPt : prompt.prompt)}
+            className="rounded-2xl border border-warm-200 bg-white px-3 py-2 text-left text-xs font-semibold leading-4 text-warm-700 transition-colors hover:border-coral-200 hover:bg-coral-50 hover:text-coral-700"
+          >
+            {locale === 'pt-BR' ? prompt.labelPt : prompt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function CoachSidebar({
   currentPage,
   onClose,
@@ -203,6 +272,7 @@ export function CoachSidebar({
   currentPage?: string
   onClose: () => void
 }) {
+  const { locale, t } = useI18n()
   const {
     threads,
     activeThread,
@@ -263,6 +333,15 @@ export function CoachSidebar({
     }
   }, [isLoading, showThreads])
 
+  useEffect(() => {
+    if (showThreads || isLoading) return
+    const draft = window.localStorage.getItem('amore-coach-draft')
+    if (!draft) return
+    window.localStorage.removeItem('amore-coach-draft')
+    setInput(draft)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [isLoading, showThreads])
+
   const handleSend = async (chipText?: string) => {
     const text = (chipText ?? input).trim()
     if (!text || isStreaming) return
@@ -303,7 +382,7 @@ export function CoachSidebar({
 
   const pageLabel = currentPage
     ? currentPage.charAt(0).toUpperCase() + currentPage.slice(1)
-    : 'Relationship'
+    : t('Relationship')
 
   return (
     <div className="flex h-full flex-col border-l border-warm-200 bg-[radial-gradient(circle_at_top,_rgba(255,241,232,0.9),_rgba(251,245,240,1)_45%,_rgba(246,239,232,1)_100%)]">
@@ -314,7 +393,7 @@ export function CoachSidebar({
               <button
                 onClick={() => setShowThreads((value) => !value)}
                 className="rounded-full p-1.5 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700"
-                aria-label="Toggle conversation history"
+                aria-label={t('Toggle conversation history')}
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h8" />
@@ -322,10 +401,10 @@ export function CoachSidebar({
               </button>
               <div>
                 <h2 className="text-sm font-semibold text-warm-900">
-                  {showThreads ? 'Conversation history' : activeThread?.title || 'Relationship coach'}
+                  {showThreads ? t('Conversation history') : activeThread?.title || t('Relationship coach')}
                 </h2>
                 <p className="text-xs text-warm-400">
-                  {showThreads ? 'Switch or clear old threads' : 'Direct guidance with your real relationship context'}
+                  {showThreads ? t('Switch or clear old threads') : t('Direct guidance with your real relationship context')}
                 </p>
               </div>
             </div>
@@ -336,7 +415,7 @@ export function CoachSidebar({
               <button
                 onClick={() => void handleNewThread()}
                 className="rounded-full p-1.5 text-warm-500 transition-colors hover:bg-warm-100 hover:text-coral-600"
-                aria-label="New conversation"
+                aria-label={t('New conversation')}
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m7-7H5" />
@@ -346,7 +425,7 @@ export function CoachSidebar({
             <button
               onClick={onClose}
               className="rounded-full p-1.5 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700"
-              aria-label="Close coach"
+              aria-label={t('Close coach')}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
@@ -358,11 +437,11 @@ export function CoachSidebar({
         {!showThreads && (
           <div className="mt-3 flex items-center gap-2">
             <span className="rounded-full border border-coral-200 bg-coral-50 px-2.5 py-1 text-[11px] font-medium text-coral-700">
-              Context: {pageLabel}
+              {t('Context')}: {pageLabel}
             </span>
             {activeThread?.updatedAt && (
               <span className="text-[11px] text-warm-400">
-                Updated {formatThreadDate(activeThread.updatedAt)}
+                {t('Updated')} {formatThreadDate(activeThread.updatedAt, locale)}
               </span>
             )}
           </div>
@@ -393,6 +472,13 @@ export function CoachSidebar({
             </div>
           )}
 
+          <QuickCoachPrompts
+            onSelect={(text) => {
+              setInput(text)
+              requestAnimationFrame(() => inputRef.current?.focus())
+            }}
+          />
+
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
             {isLoading ? (
               <div className="flex h-40 items-center justify-center">
@@ -418,8 +504,8 @@ export function CoachSidebar({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
                     </svg>
                   </div>
-                  <p className="mt-4 text-sm font-medium text-warm-800">Ask about tension, communication, goals, or what your recent patterns mean.</p>
-                  <p className="mt-2 text-xs leading-5 text-warm-500">The coach uses your relationship history, recent insights, and prior coaching threads to answer directly.</p>
+                  <p className="mt-4 text-sm font-medium text-warm-800">{t('Ask about tension, communication, goals, or what your recent patterns mean.')}</p>
+                  <p className="mt-2 text-xs leading-5 text-warm-500">{t('The coach uses your relationship history, recent insights, and prior coaching threads to answer directly.')}</p>
                 </div>
               )
             ) : (
@@ -441,7 +527,7 @@ export function CoachSidebar({
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask your coach..."
+                placeholder={t('Ask your coach...')}
                 rows={1}
                 className="max-h-24 min-h-[2rem] flex-1 resize-none bg-transparent py-1.5 text-[13px] leading-5 text-warm-800 outline-none placeholder:text-warm-400"
                 onInput={(event) => {
@@ -456,7 +542,7 @@ export function CoachSidebar({
                 <button
                   onClick={stopStreaming}
                   className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-warm-100 text-warm-600 transition-colors hover:bg-warm-200"
-                  aria-label="Stop coach response"
+                  aria-label={t('Stop coach response')}
                 >
                   <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -467,7 +553,7 @@ export function CoachSidebar({
                   onClick={() => void handleSend()}
                   disabled={!input.trim() || isLoading}
                   className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-coral-500 text-white transition-colors hover:bg-coral-600 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Send coach message"
+                  aria-label={t('Send coach message')}
                 >
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12 14 0m-7-7 7 7-7 7" />

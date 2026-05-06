@@ -1,0 +1,179 @@
+- generic [ref=e2]:
+  - navigation [ref=e191]:
+    - link "Amore" [ref=e193] [cursor=pointer]:
+      - /url: /dashboard?upgraded=false
+    - generic [ref=e194]:
+      - link "Dashboard" [ref=e195] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e197]
+        - text: Dashboard
+      - link "Insights" [ref=e199] [cursor=pointer]:
+        - /url: /insights
+        - img [ref=e201]
+        - text: Insights
+      - link "Goals" [ref=e203] [cursor=pointer]:
+        - /url: /goals
+        - img [ref=e205]
+        - text: Goals
+      - link "Chat" [ref=e208] [cursor=pointer]:
+        - /url: /chat
+        - img [ref=e210]
+        - text: Chat
+      - link "WhatsApp" [ref=e212] [cursor=pointer]:
+        - /url: /whatsapp
+        - img [ref=e214]
+        - text: WhatsApp
+      - link "Profile" [ref=e216] [cursor=pointer]:
+        - /url: /profile
+        - img [ref=e218]
+        - text: Profile
+    - generic [ref=e220]:
+      - button "Coach" [ref=e221]:
+        - img [ref=e223]
+        - text: Coach
+      - button "Sign Out" [ref=e225]:
+        - img [ref=e226]
+        - text: Sign Out
+  - generic [ref=e42]:
+    - generic [ref=e44]:
+      - img [ref=e46]
+      - generic [ref=e48]:
+        - heading "Stay in the loop" [level=3] [ref=e49]
+        - paragraph [ref=e50]: Get notified when your partner shares a mood or completes a goal — even when the app is closed.
+        - generic [ref=e51]:
+          - button "Enable notifications" [ref=e52]
+          - button "Not now" [ref=e53]
+    - generic [ref=e54]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - paragraph [ref=e58]: Today Coach
+          - heading "Get one real signal into Amore" [level=2] [ref=e59]
+        - generic [ref=e60]: Needs more data
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - paragraph [ref=e64]: One action
+            - paragraph [ref=e65]: Upload a WhatsApp export or connect WhatsApp before asking the coach for a relationship read.
+          - button "Ask coach about this" [ref=e66]
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Pattern
+          - paragraph [ref=e69]: There is not enough conversation data yet, so today should focus on first value instead of generic advice.
+          - paragraph [ref=e70]: "Source: Solo setup"
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]: ✨
+        - heading "Daily Check-in" [level=3] [ref=e74]
+      - paragraph [ref=e75]: If you could plan a perfect evening together, what would it look like?
+      - generic [ref=e76]:
+        - button "😊 Great" [ref=e77]:
+          - generic [ref=e78]: 😊
+          - generic [ref=e79]: Great
+        - button "🙂 Good" [ref=e80]:
+          - generic [ref=e81]: 🙂
+          - generic [ref=e82]: Good
+        - button "😐 Neutral" [ref=e83]:
+          - generic [ref=e84]: 😐
+          - generic [ref=e85]: Neutral
+        - button "😔 Low" [ref=e86]:
+          - generic [ref=e87]: 😔
+          - generic [ref=e88]: Low
+        - button "😢 Struggling" [ref=e89]:
+          - generic [ref=e90]: 😢
+          - generic [ref=e91]: Struggling
+    - generic [ref=e92]:
+      - generic [ref=e93]:
+        - heading "Hey, Today Coach Tester" [level=1] [ref=e94]
+        - paragraph [ref=e95]: You & Today Coach Tester
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - generic [ref=e99]: T
+          - paragraph [ref=e100]: Today Coach Tester
+          - generic [ref=e101]: No mood set
+        - generic [ref=e229]:
+          - generic [ref=e230]:
+            - img [ref=e231]
+            - generic [ref=e234]: No data yet
+          - paragraph [ref=e235]: Connect WhatsApp to get your score
+        - generic [ref=e110]:
+          - generic [ref=e112]: T
+          - paragraph [ref=e113]: Today Coach Tester
+          - generic [ref=e114]: No mood set
+      - generic [ref=e120]: AI active
+    - generic [ref=e121]:
+      - heading "Getting started" [level=3] [ref=e122]
+      - generic [ref=e123]:
+        - generic [ref=e126]:
+          - paragraph [ref=e127]: Sync messages
+          - link "Connect WhatsApp" [ref=e129] [cursor=pointer]:
+            - /url: /whatsapp
+        - paragraph [ref=e133]: Analyze patterns
+        - paragraph [ref=e137]: Generate insights
+    - generic [ref=e138]:
+      - heading "How are you feeling?" [level=3] [ref=e139]
+      - generic [ref=e140]:
+        - button "😊 Great" [ref=e141]:
+          - generic [ref=e142]: 😊
+          - generic [ref=e143]: Great
+        - button "🙂 Good" [ref=e144]:
+          - generic [ref=e145]: 🙂
+          - generic [ref=e146]: Good
+        - button "😐 Neutral" [ref=e147]:
+          - generic [ref=e148]: 😐
+          - generic [ref=e149]: Neutral
+        - button "😔 Low" [ref=e150]:
+          - generic [ref=e151]: 😔
+          - generic [ref=e152]: Low
+        - button "😢 Struggling" [ref=e153]:
+          - generic [ref=e154]: 😢
+          - generic [ref=e155]: Struggling
+    - generic [ref=e156]:
+      - generic [ref=e157]:
+        - paragraph [ref=e158]: Sentiment
+        - img [ref=e159]:
+          - generic [ref=e160]: Not enough data
+      - generic [ref=e161]:
+        - paragraph [ref=e162]: Balance
+        - generic [ref=e163]:
+          - img [ref=e164]
+          - generic [ref=e168]:
+            - generic [ref=e169]: 50% you
+            - generic [ref=e170]: 50% partner
+          - paragraph [ref=e171]: Balanced
+      - generic [ref=e172]:
+        - paragraph [ref=e173]: Activity
+        - paragraph [ref=e174]: No data yet
+        - paragraph [ref=e175]: ~0.3/day avg
+    - generic [ref=e176]:
+      - generic [ref=e177]:
+        - heading "Insights" [level=3] [ref=e178]
+        - paragraph [ref=e180]: Connect WhatsApp to get relationship insights
+      - generic [ref=e181]:
+        - generic [ref=e182]:
+          - heading "Goals" [level=3] [ref=e183]
+          - link "Manage" [ref=e184] [cursor=pointer]:
+            - /url: /goals
+        - generic [ref=e185]:
+          - paragraph [ref=e186]: No goals yet
+          - link "Add your first goal" [ref=e187] [cursor=pointer]:
+            - /url: /goals
+  - generic [ref=e237]:
+    - generic [ref=e238]:
+      - generic [ref=e239]:
+        - generic [ref=e241]:
+          - button "Toggle conversation history" [ref=e242]:
+            - img [ref=e243]
+          - generic [ref=e245]:
+            - heading "Relationship coach" [level=2] [ref=e246]
+            - paragraph [ref=e247]: Direct guidance with your real relationship context
+        - generic [ref=e248]:
+          - button "New conversation" [ref=e249]:
+            - img [ref=e250]
+          - button "Close coach" [ref=e252]:
+            - img [ref=e253]
+      - generic [ref=e255]:
+        - generic [ref=e256]: "Context: Dashboard"
+        - generic [ref=e257]: Updated May 5
+    - generic [ref=e269]:
+      - textbox "Ask your coach..." [active] [ref=e270]: Help me get my first useful relationship insight from a WhatsApp export. What should I look for before inviting my partner?
+      - button "Send coach message" [ref=e271]:
+        - img [ref=e272]

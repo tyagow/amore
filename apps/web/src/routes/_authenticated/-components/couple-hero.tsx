@@ -2,6 +2,7 @@ import { HealthRing } from './health-ring'
 import { AIPulse } from './ai-pulse'
 import { SentimentSparkline } from './sentiment-sparkline'
 import { formatTimeAgo } from '~/lib/format'
+import { useI18n } from '~/lib/i18n'
 
 interface MoodData {
   mood: string
@@ -44,9 +45,10 @@ const MOOD_LABEL: Record<string, string> = {
 }
 
 function Avatar({ name, mood }: { name: string; mood: MoodData | null }) {
+  const { locale, t } = useI18n()
   const initial = name?.charAt(0)?.toUpperCase() ?? '?'
   const emoji = mood ? (MOOD_EMOJI[mood.mood] ?? '\u{1F610}') : null
-  const label = mood ? (MOOD_LABEL[mood.mood] ?? mood.mood) : null
+  const label = mood ? t(MOOD_LABEL[mood.mood] ?? mood.mood) : null
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -58,11 +60,11 @@ function Avatar({ name, mood }: { name: string; mood: MoodData | null }) {
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-lg">{emoji}</span>
           <span className="text-[10px] text-warm-500">{label}</span>
-          <span className="text-[10px] text-warm-400">{formatTimeAgo(mood.createdAt)}</span>
+          <span className="text-[10px] text-warm-400">{formatTimeAgo(mood.createdAt, locale)}</span>
         </div>
       )}
       {!mood && (
-        <span className="text-[10px] text-warm-400">No mood set</span>
+        <span className="text-[10px] text-warm-400">{t('No mood set')}</span>
       )}
     </div>
   )
@@ -79,6 +81,7 @@ export function CoupleHero({
   partnerMood,
   sentimentByDay,
 }: CoupleHeroProps) {
+  const { locale, t } = useI18n()
   return (
     <div
       className="bg-warm-100 rounded-3xl p-8 animate-in"
@@ -89,10 +92,14 @@ export function CoupleHero({
       {/* Greeting */}
       <div className="text-center mb-6 animate-in" style={{ animationDelay: '0.05s' }}>
         <h1 className="font-display text-3xl text-warm-900">
-          {userName ? `Hey, ${userName}` : 'Dashboard'}
+          {userName ? (locale === 'pt-BR' ? `Oi, ${userName}` : `Hey, ${userName}`) : t('Dashboard')}
         </h1>
         <p className="text-warm-500 mt-1 text-sm">
-          {partnerName ? `You & ${partnerName}` : 'Your relationship at a glance'}
+          {partnerName
+            ? locale === 'pt-BR'
+              ? `Voce e ${partnerName}`
+              : `You & ${partnerName}`
+            : t('Your relationship at a glance')}
         </p>
       </div>
 

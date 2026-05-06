@@ -1,4 +1,5 @@
 import { formatTimeAgo } from '~/lib/format'
+import { useI18n } from '~/lib/i18n'
 
 interface HealthRingProps {
   score: number | null
@@ -9,6 +10,7 @@ interface HealthRingProps {
 }
 
 export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsappConnected, size: sizeProp }: HealthRingProps) {
+  const { locale, t } = useI18n()
   const size = sizeProp ?? 200
   const strokeWidth = 14
   const radius = (size - strokeWidth) / 2
@@ -28,7 +30,9 @@ export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsap
   const [c1, c2] = gradientColors[gradientId]
 
   const freshnessText = lastAnalyzed
-    ? `Analyzed ${formatTimeAgo(lastAnalyzed)}${messagesSinceAnalysis ? ` \u00B7 ${messagesSinceAnalysis} new messages` : ''}`
+    ? locale === 'pt-BR'
+      ? `Analisado ${formatTimeAgo(lastAnalyzed, locale)}${messagesSinceAnalysis ? ` \u00B7 ${messagesSinceAnalysis} novas mensagens` : ''}`
+      : `Analyzed ${formatTimeAgo(lastAnalyzed, locale)}${messagesSinceAnalysis ? ` \u00B7 ${messagesSinceAnalysis} new messages` : ''}`
     : null
 
   return (
@@ -70,10 +74,10 @@ export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsap
           {score != null ? (
             <>
               <span className={`font-display ${size >= 200 ? 'text-5xl' : 'text-3xl'}`} style={{ color: c1 }}>{score}</span>
-              <span className="text-xs text-warm-400 uppercase tracking-wide">Health</span>
+              <span className="text-xs text-warm-400 uppercase tracking-wide">{t('Health')}</span>
             </>
           ) : (
-            <span className="text-sm text-warm-400 text-center px-4">No data yet</span>
+            <span className="text-sm text-warm-400 text-center px-4">{t('No data yet')}</span>
           )}
         </div>
       </div>
@@ -81,15 +85,15 @@ export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsap
       <p className="text-sm text-warm-500">
         {score == null
           ? (messagesSinceAnalysis
-            ? 'Analyzing your messages…'
+            ? t('Analyzing your messages…')
             : whatsappConnected
-              ? 'Analyzing your relationship…'
-              : 'Connect WhatsApp to get your score')
+              ? t('Analyzing your relationship…')
+              : t('Connect WhatsApp to get your score'))
           : score > 70
-            ? 'Your relationship is thriving'
+            ? t('Your relationship is thriving')
             : score > 40
-              ? 'Room for growth'
-              : 'Needs attention'}
+              ? t('Room for growth')
+              : t('Needs attention')}
       </p>
 
       {freshnessText && (
@@ -98,4 +102,3 @@ export function HealthRing({ score, lastAnalyzed, messagesSinceAnalysis, whatsap
     </div>
   )
 }
-
