@@ -1,7 +1,9 @@
 import { useInstallPrompt } from '~/hooks/use-install-prompt'
+import { useI18n } from '~/lib/i18n'
 
 export function InstallBanner() {
   const { canInstall, promptInstall, dismiss, dismissed } = useInstallPrompt()
+  const { t } = useI18n()
 
   if (!canInstall || dismissed) return null
 
@@ -13,12 +15,12 @@ export function InstallBanner() {
         </svg>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-warm-900">Install Amore</p>
-        <p className="text-xs text-warm-500">Add to your home screen for the best experience</p>
+        <p className="text-sm font-semibold text-warm-900">{t('Install Amore')}</p>
+        <p className="text-xs text-warm-500">{t('Add to your home screen for the best experience')}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <button onClick={dismiss} className="px-3 py-1.5 text-xs font-medium text-warm-500 hover:text-warm-700 transition-colors">Later</button>
-        <button onClick={() => promptInstall()} className="px-4 py-1.5 text-xs font-medium bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors">Install</button>
+        <button onClick={dismiss} className="px-3 py-1.5 text-xs font-medium text-warm-500 hover:text-warm-700 transition-colors">{t('Later')}</button>
+        <button onClick={() => promptInstall()} className="px-4 py-1.5 text-xs font-medium bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors">{t('Install')}</button>
       </div>
     </div>
   )

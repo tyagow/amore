@@ -1,4 +1,5 @@
 import type { PersonalizedRitual } from './personalized-ritual-engine'
+import type { Locale } from '~/lib/i18n'
 
 export type WeeklyReportInput = {
   dateKey: string
@@ -17,6 +18,7 @@ export type WeeklyReportInput = {
     partnerMood: string | null
   }>
   ritual: PersonalizedRitual
+  locale?: Locale
 }
 
 export type WeeklyRelationshipReport = {
@@ -50,22 +52,32 @@ function confidenceFor(input: WeeklyReportInput): WeeklyRelationshipReport['conf
 }
 
 function scoreLineFor(input: WeeklyReportInput): string {
+  const locale = input.locale ?? 'en'
   if (input.healthScore === null) {
-    return 'No precise score yet. The report is using check-ins, goals, and available message activity.'
+    return locale === 'pt-BR'
+      ? 'Ainda nao ha uma pontuacao precisa. O relatorio usa check-ins, metas e a atividade de mensagens disponivel.'
+      : 'No precise score yet. The report is using check-ins, goals, and available message activity.'
   }
 
   if (input.healthScore < 70) {
-    return `The latest score is roughly in the repair range (${input.healthScore}/100), so treat it as a directional signal, not a verdict.`
+    return locale === 'pt-BR'
+      ? `A pontuacao mais recente esta aproximadamente na faixa de reparo (${input.healthScore}/100), entao trate como um sinal direcional, nao como veredito.`
+      : `The latest score is roughly in the repair range (${input.healthScore}/100), so treat it as a directional signal, not a verdict.`
   }
 
   if (input.healthScore >= 85) {
-    return `The latest score is roughly in a strong range (${input.healthScore}/100), but the useful question is what to repeat.`
+    return locale === 'pt-BR'
+      ? `A pontuacao mais recente esta aproximadamente em uma faixa forte (${input.healthScore}/100), mas a pergunta util e o que repetir.`
+      : `The latest score is roughly in a strong range (${input.healthScore}/100), but the useful question is what to repeat.`
   }
 
-  return `The latest score is roughly stable (${input.healthScore}/100). Use it as a prompt for one small adjustment, not a grade.`
+  return locale === 'pt-BR'
+    ? `A pontuacao mais recente esta aproximadamente estavel (${input.healthScore}/100). Use como convite para um pequeno ajuste, nao como nota.`
+    : `The latest score is roughly stable (${input.healthScore}/100). Use it as a prompt for one small adjustment, not a grade.`
 }
 
 export function buildWeeklyRelationshipReport(input: WeeklyReportInput): WeeklyRelationshipReport {
+  const locale = input.locale ?? 'en'
   const weekKey = getWeekKey(input.dateKey)
   const confidence = confidenceFor(input)
   const togetherCheckins = input.recentCheckins.filter((day) => day.bothCheckedIn).length
@@ -73,25 +85,45 @@ export function buildWeeklyRelationshipReport(input: WeeklyReportInput): WeeklyR
   const newMessages = input.messagesSinceAnalysis ?? 0
   const hasThinData = confidence === 'thin'
 
-  const headline = hasThinData
-    ? 'A lightweight weekly reset is enough this week'
-    : input.healthScore !== null && input.healthScore < 70
-      ? 'Repair and clarity should lead this week'
-      : 'Repeat one small thing that is already helping'
+  const headline = locale === 'pt-BR'
+    ? hasThinData
+      ? 'Um reset semanal leve ja basta nesta semana'
+      : input.healthScore !== null && input.healthScore < 70
+        ? 'Reparo e clareza devem guiar esta semana'
+        : 'Repitam uma coisa pequena que ja esta ajudando'
+    : hasThinData
+      ? 'A lightweight weekly reset is enough this week'
+      : input.healthScore !== null && input.healthScore < 70
+        ? 'Repair and clarity should lead this week'
+        : 'Repeat one small thing that is already helping'
 
-  const whatWorked = togetherCheckins > 0
-    ? `You both checked in on ${togetherCheckins} of the last 7 days. That is enough signal to keep the ritual mutual.`
-    : activeGoals > 0
-      ? `You have ${activeGoals} active relationship ${activeGoals === 1 ? 'goal' : 'goals'}, so follow-through matters more than adding complexity.`
-      : 'The useful win this week is keeping one practice small enough to actually repeat.'
+  const whatWorked = locale === 'pt-BR'
+    ? togetherCheckins > 0
+      ? `Voces dois fizeram check-in em ${togetherCheckins} dos ultimos 7 dias. Isso ja e sinal suficiente para manter o ritual mutuo.`
+      : activeGoals > 0
+        ? `Voces tem ${activeGoals} ${activeGoals === 1 ? 'meta ativa' : 'metas ativas'} de relacionamento, entao cumprir importa mais do que adicionar complexidade.`
+        : 'O ganho util desta semana e manter uma pratica pequena o bastante para realmente repetir.'
+    : togetherCheckins > 0
+      ? `You both checked in on ${togetherCheckins} of the last 7 days. That is enough signal to keep the ritual mutual.`
+      : activeGoals > 0
+        ? `You have ${activeGoals} active relationship ${activeGoals === 1 ? 'goal' : 'goals'}, so follow-through matters more than adding complexity.`
+        : 'The useful win this week is keeping one practice small enough to actually repeat.'
 
-  const watchPoint = newMessages >= 20
-    ? `${newMessages} newer messages have not been analyzed yet, so avoid over-reading old scores.`
-    : input.healthScore !== null && input.healthScore < 70
-      ? 'Do not turn the report into mediation. Use it to choose one calmer repair conversation.'
-      : 'Do not turn the report into a scorecard. Use it to make one next action easier.'
+  const watchPoint = locale === 'pt-BR'
+    ? newMessages >= 20
+      ? `${newMessages} mensagens mais novas ainda nao foram analisadas, entao evite ler pontuacoes antigas demais.`
+      : input.healthScore !== null && input.healthScore < 70
+        ? 'Nao transforme o relatorio em mediacao. Use para escolher uma conversa de reparo mais calma.'
+        : 'Nao transforme o relatorio em placar. Use para facilitar uma proxima acao.'
+    : newMessages >= 20
+      ? `${newMessages} newer messages have not been analyzed yet, so avoid over-reading old scores.`
+      : input.healthScore !== null && input.healthScore < 70
+        ? 'Do not turn the report into mediation. Use it to choose one calmer repair conversation.'
+        : 'Do not turn the report into a scorecard. Use it to make one next action easier.'
 
-  const nextStep = input.ritual.weeklyReportLine(input.partnerName)
+  const nextStep = input.ritual.weeklyReportLine(input.partnerName, locale)
+  const scoreLine = scoreLineFor(input)
+  const nextSmallPracticeLabel = locale === 'pt-BR' ? 'Proxima pratica pequena' : 'Next small practice'
 
   return {
     id: `${weekKey}-${input.ritual.id}`,
@@ -99,16 +131,18 @@ export function buildWeeklyRelationshipReport(input: WeeklyReportInput): WeeklyR
     generatedAt: new Date(`${input.dateKey}T12:00:00.000Z`).toISOString(),
     headline,
     confidence,
-    scoreLine: scoreLineFor(input),
+    scoreLine,
     sharedSummary: [
       headline,
-      scoreLineFor(input),
+      scoreLine,
       whatWorked,
-      `Next small practice: ${nextStep}`,
+      `${nextSmallPracticeLabel}: ${nextStep}`,
     ].join('\n\n'),
     whatWorked,
     watchPoint,
     nextStep,
-    privateCoachPrompt: `Help me reflect privately on this weekly report before I share anything with ${input.partnerName}. Keep private import or coach details out of anything partner-visible unless I explicitly choose to share them.\n\nReport headline: ${headline}\n\nWhat worked: ${whatWorked}\n\nWatch point: ${watchPoint}\n\nNext step: ${nextStep}`,
+    privateCoachPrompt: locale === 'pt-BR'
+      ? `Me ajude a refletir em privado sobre este relatorio semanal antes de compartilhar qualquer coisa com ${input.partnerName}. Mantenha importacao privada ou detalhes do orientador fora de qualquer conteudo visivel para a parceria, a menos que eu escolha compartilhar explicitamente.\n\nTitulo do relatorio: ${headline}\n\nO que funcionou: ${whatWorked}\n\nPonto de atencao: ${watchPoint}\n\nProximo passo: ${nextStep}`
+      : `Help me reflect privately on this weekly report before I share anything with ${input.partnerName}. Keep private import or coach details out of anything partner-visible unless I explicitly choose to share them.\n\nReport headline: ${headline}\n\nWhat worked: ${whatWorked}\n\nWatch point: ${watchPoint}\n\nNext step: ${nextStep}`,
   }
 }

@@ -30,10 +30,10 @@ export function PersonalizedRitualCard({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-sage-700">
             {t('Personalized ritual')}
           </p>
-          <h2 className="mt-1 font-display text-2xl text-warm-900">{t(ritual.title)}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-warm-700">{t(ritual.body)}</p>
+          <h2 className="mt-1 font-display text-2xl text-warm-900">{t(ritual.titleKey)}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-warm-700">{t(ritual.bodyKey)}</p>
           <p className="mt-3 rounded-2xl bg-white/70 px-3 py-2 text-xs leading-relaxed text-sage-800">
-            {t(ritual.reason)} {t('Rotates with cooldown so the same practice does not keep repeating.')}
+            {t(ritual.reasonKey)} {t('Rotates with cooldown so the same practice does not keep repeating.')}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -50,7 +50,7 @@ export function PersonalizedRitualCard({
               }}
               className="rounded-xl border border-sage-200 bg-white px-4 py-2 text-sm font-semibold text-sage-800 transition-colors hover:bg-sage-100"
             >
-              {t(ritual.actionLabel)}
+              {t(ritual.actionLabelKey)}
             </Link>
           </div>
         </div>

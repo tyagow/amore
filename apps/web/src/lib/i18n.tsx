@@ -21,6 +21,7 @@ const ORIGINAL_TEXT_NODES = new WeakMap<
   Text,
   { original: string; lastApplied: string | null }
 >();
+const ORIGINAL_ELEMENT_ATTRS = new WeakMap<Element, Map<string, string>>();
 
 const PT_BR_COPY: Record<string, string> = {
   "Something went wrong": "Algo deu errado",
@@ -30,8 +31,43 @@ const PT_BR_COPY: Record<string, string> = {
   Cancel: "Cancelar",
   Save: "Salvar",
   "Saving...": "Salvando...",
+  Accept: "Aceitar",
+  "Accepting...": "Aceitando...",
+  Decline: "Recusar",
+  Later: "Depois",
+  Install: "Instalar",
   Edit: "Editar",
   Manual: "Manual",
+  "Priorize seguranca agora": "Priorize seguranca agora",
+  "Prioritize safety right now": "Priorize a seguranca agora",
+  "This may involve danger, crisis, or abuse. Amore should not mediate this or draft a repair message to send right now.":
+    "Isso pode envolver perigo, crise ou abuso. O Amore nao deve mediar isso nem rascunhar uma mensagem de reparo para enviar agora.",
+  "What partner mode unlocks": "O que o modo parceria libera",
+  "Enter their email address. They'll need an Amore account to accept; your private import preview is not included in the invite.":
+    "Digite o email da pessoa. Ela precisara de uma conta Amore para aceitar; sua pre-visualizacao privada de importacao nao e incluida no convite.",
+  "Progress": "Progresso",
+  "Reconnect": "Reconectar",
+  "Document": "Documento",
+  "Connected": "Conectado",
+  "Disconnected": "Desconectado",
+  "Appreciate": "Agradecer",
+  "Reassure": "Reafirmar",
+  "Communication": "Comunicacao",
+  "Coaching": "Orientacao",
+  "Conflict": "Conflito",
+  "Sentiment": "Sentimento",
+  "Overview": "Visao geral",
+  "Emotions": "Emocoes",
+  "Discoveries": "Descobertas",
+  "Milestones": "Marcos",
+  "Wishlist": "Lista de desejos",
+  "Positive": "Positivo",
+  "Negative": "Negativo",
+  "Reassurance": "Reafirmacao",
+  "Description": "Descricao",
+  "Interests": "Interesses",
+  "messages": "mensagens",
+  "Understand": "Entender",
   "Sign in": "Entrar",
   "Sign In": "Entrar",
   "Sign Out": "Sair",
@@ -40,7 +76,7 @@ const PT_BR_COPY: Record<string, string> = {
   "Already have an account?": "Ja tem uma conta?",
   "Don't have an account?": "Ainda nao tem uma conta?",
   Email: "Email",
-  Password: "Senha",
+  "Password": "Senha",
   "Signing in...": "Entrando...",
   "Login failed": "Falha ao entrar",
   Home: "Inicio",
@@ -93,7 +129,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Score drops": "Quedas de pontuacao",
   "When your health score drops significantly":
     "Quando sua pontuacao de saude cai bastante",
-  Milestones: "Marcos",
   "Health score achievements": "Conquistas de pontuacao de saude",
   "Goal updates": "Atualizacoes de metas",
   "When your partner completes a goal": "Quando sua parceria conclui uma meta",
@@ -146,11 +181,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Repair slip": "Reparar deslize",
   "Deep dive into your relationship patterns and growth":
     "Mergulhe nos padroes e no crescimento do relacionamento",
-  Overview: "Visao geral",
-  Communication: "Comunicacao",
-  Emotions: "Emocoes",
-  Discoveries: "Descobertas",
-  Coaching: "Orientacao",
   "TODAY'S ACTION PLAN": "PLANO DE ACAO DE HOJE",
   "Health Score Trend": "Tendencia da saude",
   "Health Score": "Pontuacao de saude",
@@ -181,7 +211,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Learning Your Patterns": "Aprendendo os padroes de voces",
   "Chat with your partner and I'll start learning your patterns. Insights appear after a few messages.":
     "Converse com sua parceria e eu vou comecar a aprender os padroes de voces. Os insights aparecem depois de algumas mensagens.",
-  Progress: "Progresso",
   "Syncing messages from WhatsApp...": "Sincronizando mensagens do WhatsApp...",
   "What I felt...": "O que eu senti...",
   "What I can own...": "O que eu posso assumir...",
@@ -227,17 +256,13 @@ const PT_BR_COPY: Record<string, string> = {
   "WhatsApp Disconnected": "WhatsApp desconectado",
   "Your WhatsApp session has ended. Reconnect to continue chatting.":
     "Sua sessao do WhatsApp terminou. Reconecte para continuar conversando.",
-  Reconnect: "Reconectar",
-  Document: "Documento",
   "No messages yet. Messages you send here will appear in your partner's WhatsApp.":
     "Ainda nao ha mensagens. As mensagens enviadas aqui aparecerao no WhatsApp da sua parceria.",
   "New messages": "Novas mensagens",
   "Suggested revision:": "Revisao sugerida:",
   "Use revised version": "Usar versao revisada",
-  Connected: "Conectado",
   "Connecting...": "Conectando...",
   "Reconnecting...": "Reconectando...",
-  Disconnected: "Desconectado",
   "Logged out": "Desconectado",
   "Session expired": "Sessao expirada",
   "New conversation": "Nova conversa",
@@ -316,6 +341,7 @@ const PT_BR_COPY: Record<string, string> = {
     "Escolha uma acao que leve menos de 20 minutos, diga exatamente quando vai fazer e volte para marcar como feita em vez de deixar abstrato.",
   Struggling: "Com dificuldade",
   "Checked in today": "Check-in feito hoje",
+  "Your partner checked in too!": "Sua parceria tambem fez check-in!",
   "Invite theirs": "Convidar o check-in da parceria",
   "Today support ask": "Pedido de apoio de hoje",
   "Tell partner": "Contar para a parceria",
@@ -335,6 +361,7 @@ const PT_BR_COPY: Record<string, string> = {
     "O que ajudaria sua parceria a te apoiar?",
   "Share your thoughts (optional)...":
     "Compartilhe seus pensamentos (opcional)...",
+  "Check In": "Fazer check-in",
   "7-day rhythm": "Ritmo de 7 dias",
   "Two moods per day: you first,": "Dois humores por dia: voce primeiro,",
   "/7 together": "/7 juntos",
@@ -358,6 +385,7 @@ const PT_BR_COPY: Record<string, string> = {
     "Quando as coisas pesam, um pedido claro e gentil e mais cuidadoso do que esperar que sua parceria adivinhe.",
   "Just listen": "So ouvir",
   "I could use listening, not fixing.": "Eu preciso de escuta, nao de solucao.",
+  Warmth: "Acolhimento",
   "I could use warmth and reassurance.": "Eu preciso de carinho e reafirmacao.",
   "Practical help": "Ajuda pratica",
   "I could use practical help with one thing.":
@@ -424,8 +452,6 @@ const PT_BR_COPY: Record<string, string> = {
     "As linguagens do amor ainda nao foram detectadas. Continuem conversando naturalmente e elas vao aparecer.",
   "No discoveries yet. Keep chatting naturally — the AI will learn about your love languages, interests, wishes, and important dates.":
     "Ainda sem descobertas. Continuem conversando naturalmente — a IA vai aprender sobre linguagens do amor, interesses, desejos e datas importantes.",
-  Conflict: "Conflito",
-  Sentiment: "Sentimento",
   "The signals worth acting on first.": "Os sinais que valem acao primeiro.",
   "View all": "Ver tudo",
   "more insight": "mais insight",
@@ -463,7 +489,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Discovery move": "Movimento de descoberta",
   "Make the discovery visible in the relationship, not just in the app.":
     "Torne a descoberta visivel no relacionamento, nao apenas no app.",
-  Wishlist: "Lista de desejos",
   "Important Dates": "Datas importantes",
   "There is a wish you can turn into care.":
     "Ha um desejo que voce pode transformar em cuidado.",
@@ -494,9 +519,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Use the steadier moment to name one thing that worked, thank each other for it, and decide how to repeat the smallest version this week.":
     "Use o momento mais estavel para nomear uma coisa que funcionou, agradecer um ao outro por isso e decidir como repetir a menor versao nesta semana.",
   "No mood data": "Ainda sem dados de humor",
-  messages: "mensagens",
-  Positive: "Positivo",
-  Negative: "Negativo",
   "Emotional reset": "Reinicio emocional",
   "Turn it into one gentle check-in instead of waiting for tension to build.":
     "Transforme isso em um check-in gentil em vez de esperar a tensao crescer.",
@@ -566,8 +588,13 @@ const PT_BR_COPY: Record<string, string> = {
   "Your partner can see your mood": "Sua parceria pode ver seu humor",
   "Notify your partner immediately": "Notificar sua parceria imediatamente",
   "How are you feeling?": "Como voce esta se sentindo?",
+  Sharing: "Compartilhamento",
+  Silent: "Silencioso",
+  Visible: "Visivel",
+  Alert: "Alerta",
   "Draft support message": "Rascunhar mensagem de apoio",
   "Add a note (optional)...": "Adicionar uma nota (opcional)...",
+  "Set Mood": "Registrar humor",
   "Choose what you want to be notified about":
     "Escolha sobre o que quer receber notificacoes",
   "Pause push notifications during these hours":
@@ -577,13 +604,17 @@ const PT_BR_COPY: Record<string, string> = {
   "You're offline — some features may be unavailable":
     "Voce esta offline — alguns recursos podem estar indisponiveis",
   "Getting started": "Primeiros passos",
+  "Sync messages": "Sincronizar mensagens",
   "messages synced": "mensagens sincronizadas",
   "WhatsApp connected": "WhatsApp conectado",
   "Connect WhatsApp": "Conectar WhatsApp",
   Disconnect: "Desconectar",
   "Disconnecting...": "Desconectando...",
+  "Analyze patterns": "Analisar padroes",
   "Analyzing patterns...": "Analisando padroes...",
+  "Health score": "Pontuacao de saude",
   "Health score:": "Pontuacao de saude:",
+  "Generate insights": "Gerar insights",
   "Analysis complete!": "Analise concluida!",
   "vs last week": "vs semana passada",
   Activity: "Atividade",
@@ -649,7 +680,6 @@ const PT_BR_COPY: Record<string, string> = {
     "o que voce mais precisava que eu entendesse naquele momento?",
   "What I heard": "O que eu ouvi",
   "What I own": "O que eu assumo",
-  Reassurance: "Reafirmacao",
   "Next step": "Proximo passo",
   "After repair": "Depois do reparo",
   "Keep the repair from evaporating": "Impedir que o reparo evapore",
@@ -699,6 +729,48 @@ const PT_BR_COPY: Record<string, string> = {
   "What is small enough that we will actually do it?":
     "O que e pequeno o bastante para a gente realmente fazer?",
   "Weekly ritual": "Ritual semanal",
+  "Personalized ritual": "Ritual personalizado",
+  "10-minute repair window": "Janela de reparo de 10 minutos",
+  "Start with one appreciation, own one part, and ask what would help the repair land.":
+    "Comece com uma apreciacao, assuma uma parte e pergunte o que ajudaria o reparo a chegar bem.",
+  "Your latest pattern suggests repair matters more than adding a new habit.":
+    "Seu padrao mais recente sugere que reparar importa mais do que adicionar um novo habito.",
+  "Same-question check-in": "Check-in com a mesma pergunta",
+  "Both answer one gentle question, then compare only after both of you have answered.":
+    "Os dois respondem uma pergunta gentil, depois comparam somente depois que ambos responderam.",
+  "The current signal is to make emotional tracking mutual, not one-sided.":
+    "O sinal atual e tornar o acompanhamento emocional mutuo, nao unilateral.",
+  "Specific appreciation": "Apreciacao especifica",
+  "Name one thing you noticed, what it showed you about your partner, and how it affected you.":
+    "Nomeie uma coisa que voce percebeu, o que isso mostrou sobre sua parceria e como afetou voce.",
+  "Things look stable enough to reinforce what is already working.":
+    "As coisas parecem estaveis o bastante para reforcar o que ja esta funcionando.",
+  "Pick one existing promise or goal and send a simple follow-through update.":
+    "Escolha uma promessa ou meta existente e envie uma atualizacao simples de continuidade.",
+  "An active goal is already in motion, so the useful ritual is follow-through.":
+    "Uma meta ativa ja esta em andamento, entao o ritual util e dar continuidade.",
+  "20-minute phone-free pocket": "Momento de 20 minutos sem celular",
+  "Create one short protected pocket for a question, an appreciation, and no multitasking.":
+    "Crie um momento curto e protegido para uma pergunta, uma apreciacao e nenhuma multitarefa.",
+  "The useful move is a lightweight shared moment, not a larger relationship project.":
+    "O movimento util e um momento compartilhado leve, nao um projeto maior de relacionamento.",
+  "Rotates with cooldown so the same practice does not keep repeating.":
+    "Alterna com intervalo para que a mesma pratica nao fique se repetindo.",
+  "Coach me through it": "Me orientar nisso",
+  "Draft invite": "Rascunhar convite",
+  "Weekly relationship report": "Relatorio semanal do relacionamento",
+  "Generate this week when you are ready":
+    "Gere esta semana quando estiver pronto",
+  "Creates a shared couple summary from recent check-ins, goals, message activity, and the current ritual. It stays directional when data is thin.":
+    "Cria um resumo compartilhado do casal a partir de check-ins recentes, metas, atividade de mensagens e o ritual atual. Ele permanece direcional quando ha poucos dados.",
+  "Generate weekly report": "Gerar relatorio semanal",
+  "Regenerate report": "Gerar relatorio novamente",
+  "Shared couple report": "Relatorio compartilhado do casal",
+  "Private coach follow-up": "Acompanhamento privado com o orientador",
+  "Use this privately before sharing anything. Partner-visible summaries still require your explicit action.":
+    "Use isto em privado antes de compartilhar qualquer coisa. Resumos visiveis para a parceria ainda exigem sua acao explicita.",
+  "Reflect privately": "Refletir em privado",
+  "Recent history": "Historico recente",
   "The 15-minute relationship reset":
     "O reinicio do relacionamento em 15 minutos",
   "The app should help you build a relationship habit, not just inspect data. Do this once a week when things are calm.":
@@ -731,6 +803,16 @@ const PT_BR_COPY: Record<string, string> = {
     "Receba orientacao personalizada sobre comunicacao, resolucao de conflitos e crescimento do relacionamento. Nao e preciso conectar uma parceria.",
   "Export a conversation from WhatsApp and get a health score and relationship insights in under a minute.":
     "Exporte uma conversa do WhatsApp e receba uma pontuacao de saude e insights do relacionamento em menos de um minuto.",
+  "Invite your partner to unlock live insights, shared goals, rituals, and mood sync.":
+    "Convide sua parceria para liberar insights ao vivo, metas compartilhadas, rituais e sincronizacao de humor.",
+  "Your partner only sees what you explicitly share after they accept.":
+    "Sua parceria so ve o que voce compartilha explicitamente depois de aceitar.",
+  "Your private import preview and private coach history are not shared by default. Inviting your partner unlocks shared tools; it does not expose private solo work unless you explicitly choose to share it.":
+    "Sua pre-visualizacao privada de importacao e seu historico privado com o orientador nao sao compartilhados por padrao. Convidar sua parceria libera ferramentas compartilhadas; isso nao expoe trabalho privado solo a menos que voce escolha compartilhar explicitamente.",
+  "Live insights from both sides": "Insights ao vivo dos dois lados",
+  "Shared goals and follow-through": "Metas compartilhadas e acompanhamento",
+  "Rituals you can both complete": "Rituais que voces dois podem concluir",
+  "Mood sync without guessing": "Sincronizacao de humor sem adivinhar",
   "Invite your partner to unlock live WhatsApp analysis, shared goals, and mood tracking.":
     "Convide sua parceria para liberar analise ao vivo do WhatsApp, metas compartilhadas e acompanhamento de humor.",
   "Need your partner to know how you are right now?":
@@ -770,7 +852,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Thinking...": "Pensando...",
   "New Goal": "Nova meta",
   "e.g. Weekly date night": "ex.: encontro semanal",
-  Description: "Descricao",
   "(optional)": "(opcional)",
   "What does this goal look like?": "Como esta meta se parece?",
   "Due Date": "Data limite",
@@ -832,7 +913,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Secondary:": "Secundario:",
   "Describe your communication style...":
     "Descreva seu estilo de comunicacao...",
-  Interests: "Interesses",
   "(comma-separated)": "(separados por virgula)",
   "e.g. Cooking, Hiking, Movies, Music":
     "ex.: Cozinhar, trilhas, filmes, musica",
@@ -913,7 +993,7 @@ const PT_BR_COPY: Record<string, string> = {
     "Nao foi possivel detectar dois participantes. Envie uma exportacao de conversa 1:1.",
   "Thread not found": "Conversa nao encontrada",
   "Mood state not found": "Estado de humor nao encontrado",
-  Unauthorized: "Nao autorizado",
+  "Unauthorized": "Nao autorizado",
   "You cannot send a connection request to yourself":
     "Voce nao pode enviar um pedido de conexao para si mesmo",
   "If this email is registered, a connection request has been sent.":
@@ -933,12 +1013,10 @@ const PT_BR_COPY: Record<string, string> = {
     "Envie um check-in acolhedor, ofereca uma opcao concreta de apoio que a pessoa possa aceitar ou recusar, e volte depois sem tratar o silencio como se estivesse tudo bem.",
   Show: "Mostrar",
   Hide: "Ocultar",
-  Appreciate: "Agradecer",
   "Check in": "Checar",
   Repair: "Reparar",
   Need: "Necessidade",
   "Own my part": "Assumir minha parte",
-  Reassure: "Reafirmar",
   "Break silence": "Quebrar silencio",
   "No reply": "Sem resposta",
   "Respect no": "Respeitar o nao",
@@ -1024,7 +1102,6 @@ const PT_BR_COPY: Record<string, string> = {
   "Maybe later": "Talvez depois",
   "The space between you, understood.": "O espaco entre voces, compreendido.",
   "How it works": "Como funciona",
-  Understand: "Entender",
   Grow: "Crescer",
   "Your conversations stay private. Only insights are stored.":
     "Suas conversas continuam privadas. Apenas insights sao armazenados.",
@@ -1204,12 +1281,15 @@ function useDomTranslations(locale: Locale) {
 
     const translateElement = (element: Element) => {
       for (const attr of ["placeholder", "title", "aria-label"]) {
-        const originalAttr = `data-amore-original-${attr}`;
-        const original =
-          element.getAttribute(originalAttr) ?? element.getAttribute(attr);
+        let attrs = ORIGINAL_ELEMENT_ATTRS.get(element);
+        if (!attrs) {
+          attrs = new Map<string, string>();
+          ORIGINAL_ELEMENT_ATTRS.set(element, attrs);
+        }
+        const original = attrs.get(attr) ?? element.getAttribute(attr);
         if (!original) continue;
-        if (!element.hasAttribute(originalAttr)) {
-          element.setAttribute(originalAttr, original);
+        if (!attrs.has(attr)) {
+          attrs.set(attr, original);
         }
         const translated = translateText(original, locale);
         if (element.getAttribute(attr) !== translated) {

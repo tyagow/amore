@@ -52,10 +52,10 @@ export function RelationshipMoveCard({
     : selectedRitual
       ? {
           label: 'Today\'s relationship move',
-          title: selectedRitual.title,
-          body: selectedRitual.body,
+          title: selectedRitual.titleKey,
+          body: selectedRitual.bodyKey,
           primary: 'Coach me through it',
-          secondary: selectedRitual.actionLabel,
+          secondary: selectedRitual.actionLabelKey,
         }
     : !partnerMoodSet
       ? {

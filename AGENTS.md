@@ -10,3 +10,8 @@ Whenever changing code, ensure it aligns with the application's system design.
 - Before starting a server, check and stop stale listeners on `9941`, `9942`, and `9943`.
 - Do not leave `.worktrees/autonomous/*` dev servers running when testing current `main`; they can make old code look live.
 - If a fallback port appears, treat it as a runtime hygiene issue and return the current checkout to `9941`.
+
+## Browser Verification
+
+- Use the CMUX/browser surface for local app UI verification because it carries the logged-in session.
+- Do not use Playwright as the browser verification surface for Amore unless the user explicitly asks for it.

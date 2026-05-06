@@ -46,4 +46,23 @@ describe('weekly relationship report', () => {
     expect(report.privateCoachPrompt).toContain('reflect privately')
     expect(report.privateCoachPrompt).toContain('unless I explicitly choose')
   })
+
+  it('generates Portuguese copy for the weekly report surface', () => {
+    const report = buildWeeklyRelationshipReport({
+      dateKey: '2026-05-06',
+      partnerName: 'Jaluza',
+      healthScore: null,
+      messagesSinceAnalysis: null,
+      messageStats: null,
+      activeGoalCount: 0,
+      recentCheckins: [],
+      ritual,
+      locale: 'pt-BR',
+    })
+
+    expect(report.headline).toBe('Um reset semanal leve ja basta nesta semana')
+    expect(report.scoreLine).toContain('Ainda nao ha uma pontuacao precisa')
+    expect(report.sharedSummary).toContain('Proxima pratica pequena')
+    expect(report.privateCoachPrompt).toContain('Me ajude a refletir em privado')
+  })
 })

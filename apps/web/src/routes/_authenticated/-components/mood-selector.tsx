@@ -6,6 +6,7 @@ import { useI18n } from '~/lib/i18n'
 import {
   SUPPORT_NEEDS,
   buildCheckinDraft,
+  getSupportNeedText,
   type CheckinMood,
   type SupportNeed,
 } from './daily-checkin-support'
@@ -13,12 +14,12 @@ import {
 type Mood = CheckinMood
 type Visibility = 'silent' | 'visible' | 'alert'
 
-const MOODS: { value: Mood; emoji: string; label: string }[] = [
-  { value: 'great', emoji: '\u{1F60A}', label: 'Great' },
-  { value: 'good', emoji: '\u{1F642}', label: 'Good' },
-  { value: 'neutral', emoji: '\u{1F610}', label: 'Neutral' },
-  { value: 'low', emoji: '\u{1F614}', label: 'Low' },
-  { value: 'struggling', emoji: '\u{1F622}', label: 'Struggling' },
+const MOODS: { value: Mood; emoji: string; labelKey: string }[] = [
+  { value: 'great', emoji: '\u{1F60A}', labelKey: 'Great' },
+  { value: 'good', emoji: '\u{1F642}', labelKey: 'Good' },
+  { value: 'neutral', emoji: '\u{1F610}', labelKey: 'Neutral' },
+  { value: 'low', emoji: '\u{1F614}', labelKey: 'Low' },
+  { value: 'struggling', emoji: '\u{1F622}', labelKey: 'Struggling' },
 ]
 
 const VISIBILITIES: { value: Visibility; label: string; description: string }[] = [
@@ -28,13 +29,17 @@ const VISIBILITIES: { value: Visibility; label: string; description: string }[] 
 ]
 
 export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null)
   const [visibility, setVisibility] = useState<Visibility | null>(null)
   const [selectedSupport, setSelectedSupport] = useState<SupportNeed | null>(null)
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(false)
+  const supportNeeds = SUPPORT_NEEDS.map((need) => ({
+    ...need,
+    ...(getSupportNeedText(need.value, locale) ?? {}),
+  }))
 
   async function handleSubmit() {
     if (!selectedMood || !visibility) return
@@ -68,7 +73,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
         </span>
         <p className="text-sm text-warm-600 mt-2 flex items-center justify-center gap-1">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Saved
+          {t('Saved')}
         </p>
       </div>
     )
@@ -77,7 +82,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
   return (
     <div className="bg-warm-100 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
       <h3 className="font-display text-base text-warm-800 mb-4">
-        How are you feeling?
+        {t('How are you feeling?')}
       </h3>
 
       {/* Mood buttons */}
@@ -100,7 +105,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
             }`}
           >
             <span className="text-[30px] leading-none sm:text-[40px]">{m.emoji}</span>
-            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{m.label}</span>
+            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{t(m.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -109,7 +114,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
       {selectedMood && (
         <div className="mt-4 space-y-2">
           <p className="text-xs font-medium text-warm-500 tracking-wide">
-            Sharing
+            {t('Sharing')}
           </p>
           <div className="flex gap-2">
             {VISIBILITIES.map((v) => (
@@ -123,7 +128,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
                     : 'bg-warm-200 text-warm-600 hover:bg-warm-300'
                 }`}
               >
-                {v.label}
+                {t(v.label)}
               </button>
             ))}
           </div>
@@ -136,10 +141,10 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
           {visibility !== 'silent' && (
             <div className="rounded-2xl border border-warm-200 bg-white/70 p-3">
               <p className="text-sm font-semibold text-warm-900">
-                What would help your partner support you?
+                {t('What would help your partner support you?')}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {SUPPORT_NEEDS.map((need) => (
+                {supportNeeds.map((need) => (
                   <button
                     key={need.value}
                     type="button"
@@ -164,14 +169,14 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
                 }}
                 className="mt-3 inline-flex rounded-xl border border-coral-200 bg-coral-50 px-3 py-2 text-sm font-semibold text-coral-700 transition-colors hover:bg-coral-100"
               >
-                Draft support message
+                {t('Draft support message')}
               </Link>
             </div>
           )}
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Add a note (optional)..."
+            placeholder={t('Add a note (optional)...')}
             rows={2}
             className="w-full text-sm border border-warm-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-coral-300 placeholder:text-warm-400"
           />
@@ -181,7 +186,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
             disabled={submitting}
             className="w-full bg-coral-500 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-coral-600 shadow-md shadow-coral-200/50 disabled:opacity-50 transition-colors"
           >
-            {submitting ? 'Saving...' : 'Set Mood'}
+            {submitting ? t('Saving...') : t('Set Mood')}
           </button>
         </div>
       )}

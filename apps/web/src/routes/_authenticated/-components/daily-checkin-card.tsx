@@ -5,7 +5,6 @@ import { getDailyQuestion } from '@amore-couples/ai/daily-questions'
 import { useI18n } from '~/lib/i18n'
 import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
 import {
-  CHECKIN_GUIDANCE,
   SUPPORT_NEEDS,
   buildCheckinDraft,
   buildPartnerCheckinThanksDraft,
@@ -20,18 +19,20 @@ import {
   buildSupportLandingCheckDraft,
   buildSupportThanksDraft,
   buildTonightPlanDraft,
+  getCheckinGuidance,
+  getSupportNeedText,
   inferSupportNeedFromAnswer,
   type CheckinMood,
   type SupportNeed,
 } from './daily-checkin-support'
 import { DailyCheckinRhythm } from './daily-checkin-rhythm'
 
-const MOODS: { value: CheckinMood; emoji: string; label: string }[] = [
-  { value: 'great', emoji: '\u{1F60A}', label: 'Great' },
-  { value: 'good', emoji: '\u{1F642}', label: 'Good' },
-  { value: 'neutral', emoji: '\u{1F610}', label: 'Neutral' },
-  { value: 'low', emoji: '\u{1F614}', label: 'Low' },
-  { value: 'struggling', emoji: '\u{1F622}', label: 'Struggling' },
+const MOODS: { value: CheckinMood; emoji: string; labelKey: string }[] = [
+  { value: 'great', emoji: '\u{1F60A}', labelKey: 'Great' },
+  { value: 'good', emoji: '\u{1F642}', labelKey: 'Good' },
+  { value: 'neutral', emoji: '\u{1F610}', labelKey: 'Neutral' },
+  { value: 'low', emoji: '\u{1F614}', labelKey: 'Low' },
+  { value: 'struggling', emoji: '\u{1F622}', labelKey: 'Struggling' },
 ]
 
 interface CheckinData {
@@ -76,15 +77,20 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
   const [submitted, setSubmitted] = useState(!!data.checkin)
   const [streakCount, setStreakCount] = useState(data.streak.currentStreak)
   const todayQuestion = getDailyQuestion(new Date().toISOString().slice(0, 10), locale)
+  const checkinGuidance = getCheckinGuidance(locale)
+  const supportNeeds = SUPPORT_NEEDS.map((need) => ({
+    ...need,
+    ...(getSupportNeedText(need.value, locale) ?? {}),
+  }))
 
   // Already checked in today — show collapsed state
   if (submitted || data.checkin) {
     const mood = data.checkin?.mood ?? selectedMood
     const moodInfo = MOODS.find((m) => m.value === mood)
     const supportNeed = selectedSupport ?? inferSupportNeedFromAnswer(data.checkin?.answer)
-    const support = SUPPORT_NEEDS.find((need) => need.value === supportNeed)
+    const support = getSupportNeedText(supportNeed, locale)
     const partnerSupportNeed = inferSupportNeedFromAnswer(data.partnerCheckin?.answer)
-    const partnerSupport = SUPPORT_NEEDS.find((need) => need.value === partnerSupportNeed)
+    const partnerSupport = getSupportNeedText(partnerSupportNeed, locale)
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
         <div className="flex items-center justify-between gap-4">
@@ -96,12 +102,12 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
             </div>
             <div>
               <p className="text-sm font-medium text-emerald-800">
-                Checked in today {moodInfo ? `${moodInfo.emoji}` : ''}
+                {t('Checked in today')} {moodInfo ? `${moodInfo.emoji}` : ''}
               </p>
               <p className="text-xs text-emerald-600">
                 {data.partnerCheckedIn
-                  ? 'Your partner checked in too!'
-                  : 'Waiting for your partner...'}
+                  ? t('Your partner checked in too!')
+                  : t('Waiting for your partner...')}
               </p>
             </div>
           </div>
@@ -114,14 +120,16 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
                 }}
                 className="inline-flex rounded-full bg-white/75 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-white"
               >
-                Invite theirs
+                {t('Invite theirs')}
               </Link>
             )}
             {streakCount > 0 && (
               <div className="flex items-center gap-1.5 bg-emerald-100 px-3 py-1.5 rounded-full">
                 <span className="text-base">🔥</span>
                 <span className="text-sm font-bold text-emerald-700">{streakCount}</span>
-                <span className="text-xs text-emerald-600">day{streakCount !== 1 ? 's' : ''}</span>
+                <span className="text-xs text-emerald-600">
+                  {locale === 'pt-BR' ? `dia${streakCount !== 1 ? 's' : ''}` : `day${streakCount !== 1 ? 's' : ''}`}
+                </span>
               </div>
             )}
           </div>
@@ -129,7 +137,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
         {support && supportNeed && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-white/70 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              Today support ask
+              {t('Today support ask')}
             </p>
             <p className="mt-1 text-sm text-emerald-900">
               {support.label}: {support.answer}
@@ -140,49 +148,49 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
                 onClick={() => storeChatDraft(buildSupportFollowupDraft(supportNeed, locale), locale)}
                 className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
               >
-                Tell partner
+                {t('Tell partner')}
               </Link>
               <Link
                 to="/chat"
                 onClick={() => storeChatDraft(buildTonightPlanDraft(mood, supportNeed, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Make tonight plan
+                {t('Make tonight plan')}
               </Link>
               <Link
                 to="/goals"
                 onClick={() => storeGoalDraft(buildSupportGoalDraft(supportNeed, undefined, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Make support goal
+                {t('Make support goal')}
               </Link>
               <Link
                 to="/chat"
                 onClick={() => storeChatDraft(buildReciprocalSupportDraft(partnerName, supportNeed, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Ask theirs too
+                {t('Ask theirs too')}
               </Link>
               <Link
                 to="/chat"
                 onClick={() => storeChatDraft(buildSupportThanksDraft(partnerName, supportNeed, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Thank after help
+                {t('Thank after help')}
               </Link>
               <Link
                 to="/chat"
                 onClick={() => storeChatDraft(buildSupportLandingCheckDraft(partnerName, supportNeed, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Check if it landed
+                {t('Check if it landed')}
               </Link>
               <Link
                 to="/chat"
                 onClick={() => storeChatDraft(buildSupportAvoidanceDraft(partnerName, supportNeed, locale), locale)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Name what not to do
+                {t('Name what not to do')}
               </Link>
               <button
                 type="button"
@@ -192,7 +200,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
                 }}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                Ask coach
+                {t('Ask coach')}
               </button>
             </div>
           </div>
@@ -200,7 +208,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
         {partnerSupport && partnerSupportNeed && (
           <div className="mt-3 rounded-xl border border-sage-500/20 bg-white/70 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-sage-700">
-              {partnerName} support ask
+              {locale === 'pt-BR' ? `Pedido de apoio de ${partnerName}` : `${partnerName} support ask`}
             </p>
             <p className="mt-1 text-sm text-warm-800">
               {partnerSupport.label}: {partnerSupport.answer}
@@ -212,7 +220,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
               }}
               className="mt-3 inline-flex rounded-lg bg-sage-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
             >
-              Respond with care
+              {t('Respond with care')}
             </Link>
             <Link
               to="/chat"
@@ -221,14 +229,14 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
               }}
               className="ml-2 mt-3 inline-flex rounded-lg border border-sage-500/20 bg-white px-3 py-1.5 text-xs font-semibold text-sage-700 transition-colors hover:bg-sage-50"
             >
-              Thank first
+              {t('Thank first')}
             </Link>
             <Link
               to="/goals"
               onClick={() => storeGoalDraft(buildSupportGoalDraft(partnerSupportNeed, partnerName, locale), locale)}
               className="ml-2 mt-3 inline-flex rounded-lg border border-sage-500/20 bg-white px-3 py-1.5 text-xs font-semibold text-sage-700 transition-colors hover:bg-sage-50"
             >
-              Make support goal
+              {t('Make support goal')}
             </Link>
             <Link
               to="/chat"
@@ -237,7 +245,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
               }}
               className="ml-2 mt-3 inline-flex rounded-lg border border-sage-500/20 bg-white px-3 py-1.5 text-xs font-semibold text-sage-700 transition-colors hover:bg-sage-50"
             >
-              Ask what to avoid
+              {t('Ask what to avoid')}
             </Link>
           </div>
         )}
@@ -277,7 +285,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
     <div className="bg-gradient-to-br from-coral-50 to-amber-50 border border-coral-200 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6">
       <div className="flex items-center gap-2 mb-1">
         <span className="text-base">✨</span>
-        <h3 className="font-display text-base text-warm-800">Daily Check-in</h3>
+        <h3 className="font-display text-base text-warm-800">{t('Daily Check-in')}</h3>
       </div>
 
       <p className="text-sm text-warm-600 mb-4 leading-relaxed">
@@ -300,7 +308,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
             }`}
           >
             <span className="text-[30px] leading-none sm:text-[40px]">{m.emoji}</span>
-            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{m.label}</span>
+            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{t(m.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -310,10 +318,10 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
         <div className="space-y-3">
           <div className="rounded-2xl border border-coral-100 bg-white/70 p-4">
             <p className="text-sm font-semibold text-warm-900">
-              {CHECKIN_GUIDANCE[selectedMood].title}
+              {checkinGuidance[selectedMood].title}
             </p>
             <p className="mt-1 text-sm leading-relaxed text-warm-500">
-              {CHECKIN_GUIDANCE[selectedMood].body}
+              {checkinGuidance[selectedMood].body}
             </p>
             <Link
               to="/chat"
@@ -322,7 +330,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
               }}
               className="mt-3 inline-flex rounded-xl border border-coral-200 bg-coral-50 px-3 py-2 text-sm font-semibold text-coral-700 transition-colors hover:bg-coral-100"
             >
-              Draft this message
+              {t('Draft this message')}
             </Link>
             <Link
               to="/chat"
@@ -331,15 +339,15 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
               }}
               className="mt-3 ml-2 inline-flex rounded-xl border border-sage-500/25 bg-sage-50 px-3 py-2 text-sm font-semibold text-sage-700 transition-colors hover:bg-sage-100"
             >
-              Make tonight plan
+              {t('Make tonight plan')}
             </Link>
           </div>
           <div className="rounded-2xl border border-warm-200 bg-white/70 p-4">
             <p className="text-sm font-semibold text-warm-900">
-              What would help your partner support you?
+              {t('What would help your partner support you?')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {SUPPORT_NEEDS.map((need) => (
+              {supportNeeds.map((need) => (
                 <button
                   key={need.value}
                   type="button"
@@ -361,7 +369,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
           <textarea
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Share your thoughts (optional)..."
+            placeholder={t('Share your thoughts (optional)...')}
             rows={2}
             maxLength={500}
             className="w-full text-sm border border-warm-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-coral-300 placeholder:text-warm-400 bg-white/70"
@@ -372,7 +380,7 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
             disabled={submitting}
             className="w-full bg-coral-500 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-coral-600 shadow-md shadow-coral-200/50 disabled:opacity-50 transition-colors"
           >
-            {submitting ? 'Saving...' : 'Check In'}
+            {submitting ? t('Saving...') : t('Check In')}
           </button>
         </div>
       )}

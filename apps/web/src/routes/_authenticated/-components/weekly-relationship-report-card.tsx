@@ -35,7 +35,7 @@ export function WeeklyRelationshipReportCard({
   ritual: PersonalizedRitual
   onOpenCoach: (prompt: string) => void
 }) {
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
   const [report, setReport] = useState<WeeklyRelationshipReport | null>(null)
   const [history, setHistory] = useState<WeeklyRelationshipReport[]>([])
 
@@ -66,6 +66,7 @@ export function WeeklyRelationshipReportCard({
       activeGoalCount,
       recentCheckins,
       ritual,
+      locale,
     })
 
     setReport(nextReport)

@@ -152,19 +152,23 @@ const SUPPORT_GOAL_DESCRIPTIONS_PT_BR: Record<SupportNeed, string> = {
   later: 'Coloque o check-in de mais tarde em algum lugar onde ele realmente va acontecer, depois pergunte o que ajudaria antes do dia terminar.',
 }
 
-function guidanceFor(locale: Locale) {
+export function getCheckinGuidance(locale: Locale) {
   return locale === 'pt-BR' ? CHECKIN_GUIDANCE_PT_BR : CHECKIN_GUIDANCE
 }
 
-function supportNeedText(supportNeed: SupportNeed | null | undefined, locale: Locale) {
+export function getSupportNeedText(supportNeed: SupportNeed | null | undefined, locale: Locale) {
   if (!supportNeed) return null
   if (locale === 'pt-BR') return SUPPORT_NEEDS_PT_BR[supportNeed] ?? null
   return SUPPORT_NEEDS.find((need) => need.value === supportNeed) ?? null
 }
 
+function supportNeedText(supportNeed: SupportNeed | null | undefined, locale: Locale) {
+  return getSupportNeedText(supportNeed, locale)
+}
+
 export function buildCheckinDraft(mood: CheckinMood, supportNeed: SupportNeed | null, locale: Locale = 'en') {
-  const support = supportNeedText(supportNeed, locale)
-  if (!support) return guidanceFor(locale)[mood].draft
+  const support = getSupportNeedText(supportNeed, locale)
+  if (!support) return getCheckinGuidance(locale)[mood].draft
 
   if (locale === 'pt-BR') {
     return `${CHECKIN_GUIDANCE_PT_BR[mood].draft}\n\nO que ajudaria: ${support.phrase}`

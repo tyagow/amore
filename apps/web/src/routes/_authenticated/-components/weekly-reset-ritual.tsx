@@ -44,7 +44,7 @@ export function WeeklyResetRitual({
   const [stepNotes, setStepNotes] = useState<Record<string, string>>({})
   const storageKey = 'amore-weekly-reset-progress'
   const notesStorageKey = 'amore-weekly-reset-notes'
-  const weeklyRitualLine = suggestedRitual?.weeklyReportLine(partnerName)
+  const weeklyRitualLine = suggestedRitual?.weeklyReportLine(partnerName, locale)
   const draft = [
     buildWeeklyResetDraft(partnerName, stepNotes, locale),
     weeklyRitualLine
@@ -126,7 +126,7 @@ export function WeeklyResetRitual({
           </p>
           {suggestedRitual && (
             <p className="mt-3 rounded-2xl bg-lavender-50 px-3 py-2 text-xs leading-relaxed text-lavender-800">
-              {t('This week should stay tied to the daily ritual:')} {t(suggestedRitual.title)}
+              {t('This week should stay tied to the daily ritual:')} {t(suggestedRitual.titleKey)}
             </p>
           )}
           <div className="mt-4">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { useI18n } from '~/lib/i18n'
 
 interface OnboardingCardProps {
   whatsappJid: string | null
@@ -74,6 +75,7 @@ export function OnboardingCard({
   analyzing,
   onAnalyze,
 }: OnboardingCardProps) {
+  const { locale, t } = useI18n()
   const hasTriggered = useRef(false)
   const [hidden, setHidden] = useState(false)
 
@@ -117,27 +119,31 @@ export function OnboardingCard({
   return (
     <div className="bg-coral-50 rounded-2xl shadow-[0_1px_3px_rgba(42,33,24,0.04),0_4px_12px_rgba(42,33,24,0.02)] p-6 animate-in">
       <h3 className="font-display text-base text-warm-800 mb-4">
-        Getting started
+        {t('Getting started')}
       </h3>
 
       <div className="space-y-4">
         {/* Step 1: Sync messages */}
         <StepRow
           status={syncStatus}
-          label="Sync messages"
+          label={t('Sync messages')}
           detail={
             syncStatus === 'done' ? (
               totalMessages && totalMessages > 0 ? (
-                <span>{totalMessages.toLocaleString()} messages synced</span>
+                <span>
+                  {locale === 'pt-BR'
+                    ? `${totalMessages.toLocaleString()} mensagens sincronizadas`
+                    : `${totalMessages.toLocaleString()} messages synced`}
+                </span>
               ) : (
-                <span>WhatsApp connected</span>
+                <span>{t('WhatsApp connected')}</span>
               )
             ) : (
               <Link
                 to="/whatsapp"
                 className="text-coral-600 hover:text-coral-700 font-medium underline underline-offset-2"
               >
-                Connect WhatsApp
+                {t('Connect WhatsApp')}
               </Link>
             )
           }
@@ -146,13 +152,13 @@ export function OnboardingCard({
         {/* Step 2: Analyze patterns */}
         <StepRow
           status={analyzeStatus}
-          label="Analyze patterns"
+          label={t('Analyze patterns')}
           detail={
             analyzeStatus === 'active' ? (
-              <span>Analyzing patterns...</span>
+              <span>{t('Analyzing patterns...')}</span>
             ) : analyzeStatus === 'done' ? (
               <span>
-                Health score: {healthScore}
+                {t('Health score')}: {healthScore}
               </span>
             ) : undefined
           }
@@ -161,10 +167,10 @@ export function OnboardingCard({
         {/* Step 3: Generate insights */}
         <StepRow
           status={insightsStatus}
-          label="Generate insights"
+          label={t('Generate insights')}
           detail={
             insightsStatus === 'done' ? (
-              <span>Analysis complete!</span>
+              <span>{t('Analysis complete!')}</span>
             ) : undefined
           }
         />

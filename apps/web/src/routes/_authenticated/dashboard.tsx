@@ -70,7 +70,7 @@ function SoloOnboarding({ pendingRequests }: {
   pendingRequests: Awaited<ReturnType<typeof getPendingRequests>>
 }) {
   const router = useRouter()
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
   const [processingId, setProcessingId] = useState<string | null>(null)
 
   const handleAccept = async (requestId: string) => {
@@ -109,9 +109,13 @@ function SoloOnboarding({ pendingRequests }: {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
             </span>
             <h2 className="text-lg font-bold text-warm-900">
-              {pendingRequests.length === 1
-                ? 'You have a connection request!'
-                : `You have ${pendingRequests.length} connection requests!`}
+              {locale === 'pt-BR'
+                ? pendingRequests.length === 1
+                  ? 'Voce tem um pedido de conexao!'
+                  : `Voce tem ${pendingRequests.length} pedidos de conexao!`
+                : pendingRequests.length === 1
+                  ? 'You have a connection request!'
+                  : `You have ${pendingRequests.length} connection requests!`}
             </h2>
           </div>
           <div className="space-y-3">
@@ -130,14 +134,14 @@ function SoloOnboarding({ pendingRequests }: {
                       disabled={!!processingId}
                       className="px-4 py-2 bg-coral-500 text-white text-sm rounded-lg font-medium hover:bg-coral-600 disabled:opacity-50 transition-colors"
                     >
-                      {processingId === request.id ? 'Accepting...' : 'Accept'}
+                      {processingId === request.id ? t('Accepting...') : t('Accept')}
                     </button>
                     <button
                       onClick={() => handleDecline(request.id)}
                       disabled={!!processingId}
                       className="px-4 py-2 border border-warm-300 text-warm-600 text-sm rounded-lg font-medium hover:bg-warm-100 disabled:opacity-50 transition-colors"
                     >
-                      Decline
+                      {t('Decline')}
                     </button>
                   </div>
                 </div>
@@ -149,7 +153,7 @@ function SoloOnboarding({ pendingRequests }: {
 
       {/* Welcome header */}
       <div className="text-center">
-        <h1 className="font-display text-3xl text-warm-900 mb-2">Welcome to Amore</h1>
+        <h1 className="font-display text-3xl text-warm-900 mb-2">{t('Welcome to Amore')}</h1>
         <p className="text-warm-500 leading-relaxed">
           {t('Get started by talking to your coach or uploading a conversation for instant insights.')}
         </p>
@@ -190,9 +194,9 @@ function SoloOnboarding({ pendingRequests }: {
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-warm-900 mb-1">Upload a WhatsApp chat</h3>
+            <h3 className="text-base font-semibold text-warm-900 mb-1">{t('Upload a WhatsApp chat')}</h3>
             <p className="text-sm text-warm-500 leading-relaxed">
-              Export a conversation from WhatsApp and get a health score and relationship insights in under a minute.
+              {t('Export a conversation from WhatsApp and get a health score and relationship insights in under a minute.')}
             </p>
           </div>
           <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-coral-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,17 +217,17 @@ function SoloOnboarding({ pendingRequests }: {
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-warm-700 mb-1">Connect with your partner</h3>
+            <h3 className="text-base font-semibold text-warm-700 mb-1">{t('Connect with your partner')}</h3>
             <p className="text-sm text-warm-400 leading-relaxed">
-              Invite your partner to unlock live insights, shared goals, rituals, and mood sync.
+              {t('Invite your partner to unlock live insights, shared goals, rituals, and mood sync.')}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-warm-400">
-              {buildPartnerInvitePrivacyNote(false)}
+              {t(buildPartnerInvitePrivacyNote(false))}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {PARTNER_INVITE_UNLOCKS.slice(0, 3).map((unlock) => (
                 <span key={unlock} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-warm-500">
-                  {unlock}
+                  {t(unlock)}
                 </span>
               ))}
             </div>
