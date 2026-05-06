@@ -19,6 +19,8 @@ import { OnboardingCard } from './-components/onboarding-card'
 import { InstallBanner } from './-components/install-banner'
 import { PushOptIn } from './-components/push-opt-in'
 import { DailyCheckinCard } from './-components/daily-checkin-card'
+import { TodayCoachCard } from './-components/today-coach-card'
+import { buildTodayCoachBrief } from '@amore-couples/ai/today-coach'
 import { getDailyCheckin } from '~/server/checkin'
 import {
   isUpgradeGateDetail,
@@ -40,7 +42,33 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
       getPendingMoodDetections(),
       getDailyCheckin(),
     ])
-    return { hasCouple: true as const, ...intelligence, activeCoaching, pendingMoodDetections, dailyCheckin }
+    const todayCoach = buildTodayCoachBrief({
+      healthScore: intelligence.couple.healthScore,
+      whatsappConnected: !!intelligence.couple.whatsappJid,
+      messageStats: intelligence.messageStats,
+      recentInsights: intelligence.recentInsights.map((insight) => ({
+        type: insight.type,
+        severity: insight.severity,
+        content: insight.content,
+      })),
+      activeGoals: intelligence.activeGoals.map((goal) => ({
+        title: goal.title,
+        status: goal.status,
+      })),
+      myMood: intelligence.myMood
+        ? { mood: intelligence.myMood.mood, note: intelligence.myMood.note }
+        : null,
+      partnerMood: intelligence.partnerMood
+        ? { mood: intelligence.partnerMood.mood, note: intelligence.partnerMood.note }
+        : null,
+      dailyCheckin: {
+        checkedIn: !!dailyCheckin.checkin,
+        partnerCheckedIn: dailyCheckin.partnerCheckedIn,
+        question: dailyCheckin.question,
+        streak: dailyCheckin.streak.currentStreak,
+      },
+    })
+    return { hasCouple: true as const, ...intelligence, activeCoaching, pendingMoodDetections, dailyCheckin, todayCoach }
   },
   component: DashboardPage,
 })
@@ -268,6 +296,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
       <InstallBanner />
       <PushOptIn />
+      <TodayCoachCard brief={data.todayCoach} />
       <DailyCheckinCard data={data.dailyCheckin} />
       <CoupleHero
         userName={data.userName}

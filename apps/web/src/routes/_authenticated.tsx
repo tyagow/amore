@@ -72,11 +72,19 @@ function AuthenticatedLayout() {
   const { pendingRequestCount, hasCouple } = Route.useRouteContext()
   const location = useLocation()
   const [coachOpen, setCoachOpen] = useState(false)
+  const [coachPrompt, setCoachPrompt] = useState<string | null>(null)
   const [hasNudges, setHasNudges] = useState(false)
 
   // Listen for coach open events from child components (e.g. SoloOnboarding CTA)
   useEffect(() => {
-    const handler = () => setCoachOpen(true)
+    const handler = (event: Event) => {
+      const prompt =
+        event instanceof CustomEvent && typeof event.detail?.prompt === 'string'
+          ? event.detail.prompt
+          : null
+      setCoachPrompt(prompt)
+      setCoachOpen(true)
+    }
     window.addEventListener('amore:open-coach', handler)
     return () => window.removeEventListener('amore:open-coach', handler)
   }, [])
@@ -114,6 +122,7 @@ function AuthenticatedLayout() {
         <div className="fixed inset-y-0 right-0 z-40 hidden w-[22rem] lg:block">
           <CoachSidebar
             currentPage={currentPage}
+            initialPrompt={coachPrompt}
             onClose={() => setCoachOpen(false)}
           />
         </div>
@@ -123,6 +132,7 @@ function AuthenticatedLayout() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <CoachSidebar
             currentPage={currentPage}
+            initialPrompt={coachPrompt}
             onClose={() => setCoachOpen(false)}
           />
         </div>

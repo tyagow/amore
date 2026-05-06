@@ -198,9 +198,11 @@ function SuggestionChips({
 
 export function CoachSidebar({
   currentPage,
+  initialPrompt,
   onClose,
 }: {
   currentPage?: string
+  initialPrompt?: string | null
   onClose: () => void
 }) {
   const {
@@ -262,6 +264,12 @@ export function CoachSidebar({
       inputRef.current?.focus()
     }
   }, [isLoading, showThreads])
+
+  useEffect(() => {
+    if (!initialPrompt) return
+    setInput(initialPrompt)
+    inputRef.current?.focus()
+  }, [initialPrompt])
 
   const handleSend = async (chipText?: string) => {
     const text = (chipText ?? input).trim()
