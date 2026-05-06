@@ -4,6 +4,7 @@ export * from './coach-conversation'
 export { extractEntities, type ExtractedEntities } from './extract'
 export { AIParseError } from './config'
 export { getAILocaleInstruction, localized, normalizeAILocale, type AILocale } from './locale'
+export { buildImportFallbackAnalysis } from './import-fallback'
 export { analysisResultSchema, extractedEntitiesSchema, coachingTipsSchema } from './schemas'
 export {
   detectNudgeTriggers,

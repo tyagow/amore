@@ -12,7 +12,11 @@ import {
 } from '@amore-couples/db/schema'
 import { eq, or, and } from 'drizzle-orm'
 import { requireAuth } from './require-couple'
-import { parseWhatsAppExport, runAnalysisPipeline } from '@amore-couples/ai'
+import {
+  buildImportFallbackAnalysis,
+  parseWhatsAppExport,
+  runAnalysisPipeline,
+} from '@amore-couples/ai'
 import type { Message } from '@amore-couples/types'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -139,15 +143,25 @@ export const uploadChatExport = createServerFn({ method: 'POST' })
     }))
 
     try {
-      // Run the analysis pipeline
-      const output = await runAnalysisPipeline(
-        analysisMessages,
-        couple.id,
-        data.userSenderName,
-        undefined,
-        undefined,
-        data.locale,
-      )
+      let output
+      try {
+        output = await runAnalysisPipeline(
+          analysisMessages,
+          couple.id,
+          data.userSenderName,
+          undefined,
+          undefined,
+          data.locale,
+        )
+      } catch (err) {
+        console.error('Analysis pipeline failed for chat export, using fallback:', err)
+        output = buildImportFallbackAnalysis(
+          analysisMessages,
+          couple.id,
+          data.userSenderName,
+          data.locale,
+        )
+      }
 
       // Persist analysis results
       await db.transaction(async (tx) => {
