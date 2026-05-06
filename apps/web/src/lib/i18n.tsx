@@ -1160,7 +1160,7 @@ export function GlobalLanguageToggle() {
   const { locale, setLocale } = useI18n();
 
   return (
-    <div className="fixed right-3 top-3 z-[60] flex rounded-full border border-warm-200/60 bg-warm-50/70 px-1 py-0.5 opacity-70 shadow-[0_1px_3px_rgba(42,33,24,0.04)] backdrop-blur transition-opacity hover:opacity-100 md:hidden">
+    <div className="fixed right-3 top-3 z-[60] flex rounded-full border border-warm-200/60 bg-warm-50/70 px-1 py-0.5 opacity-70 shadow-[0_1px_3px_rgba(42,33,24,0.04)] backdrop-blur transition-opacity hover:opacity-100">
       {(["en", "pt-BR"] as const).map((option) => (
         <button
           key={option}

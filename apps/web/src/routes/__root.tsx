@@ -13,20 +13,23 @@ function RootErrorComponent({ error, reset }: ErrorComponentProps) {
         <link rel="stylesheet" href={appCss} />
       </head>
       <body className="bg-warm-50 text-warm-800 font-sans">
-        <div className="min-h-screen flex items-center justify-center px-6">
-          <div className="text-center max-w-md">
-            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-            <p className="text-warm-600 mb-6">
-              {error instanceof Error ? error.message : 'An unexpected error occurred.'}
-            </p>
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
-            >
-              Try again
-            </button>
+        <I18nProvider>
+          <div className="min-h-screen flex items-center justify-center px-6">
+            <div className="text-center max-w-md">
+              <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+              <p className="text-warm-600 mb-6">
+                {error instanceof Error ? error.message : 'An unexpected error occurred.'}
+              </p>
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
+              >
+                Try again
+              </button>
+            </div>
           </div>
-        </div>
+          <GlobalLanguageToggle />
+        </I18nProvider>
         <Scripts />
       </body>
     </html>

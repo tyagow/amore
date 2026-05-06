@@ -143,11 +143,142 @@ function castProfile(row: {
 }): ProfileRow {
   return {
     ...row,
-    loveLanguages: (row.loveLanguages as ProfileData['loveLanguages']) ?? null,
-    communicationStyle:
-      (row.communicationStyle as ProfileData['communicationStyle']) ?? null,
-    interests: (row.interests as ProfileData['interests']) ?? null,
+    loveLanguages: normalizeLoveLanguages(row.loveLanguages),
+    communicationStyle: normalizeCommunicationStyle(row.communicationStyle),
+    interests: normalizeInterests(row.interests),
   }
+}
+
+export function normalizeLoveLanguages(value: unknown): ProfileData['loveLanguages'] {
+  const source = readSource(value)
+
+  if (typeof value === 'string') {
+    const primary = value.trim()
+    return primary ? { primary, source } : null
+  }
+
+  if (Array.isArray(value)) {
+    const languages = value
+      .flatMap((item) => {
+        if (typeof item === 'string') return [{ language: item, confidence: 0 }]
+        if (!item || typeof item !== 'object') return []
+        const record = item as Record<string, unknown>
+        const language = readString(record.language)
+        if (!language) return []
+        const confidence =
+          typeof record.confidence === 'number' && Number.isFinite(record.confidence)
+            ? record.confidence
+            : 0
+        return [{ language, confidence }]
+      })
+      .sort((a, b) => b.confidence - a.confidence)
+      .map((item) => item.language)
+
+    return languages[0]
+      ? { primary: languages[0], secondary: languages[1], source }
+      : null
+  }
+
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  const primary = readString(record.primary) || readString(record.language)
+  const secondary = readString(record.secondary)
+
+  return primary ? { primary, secondary, source } : null
+}
+
+export function normalizeCommunicationStyle(value: unknown): ProfileData['communicationStyle'] {
+  const source = readSource(value)
+
+  if (typeof value === 'string') {
+    const type = value.trim()
+    return type ? { type, description: '', source } : null
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+
+  const record = value as Record<string, unknown>
+  const type = readString(record.type) || readString(record.style)
+  const description = readString(record.description) || readString(record.summary) || ''
+
+  return type ? { type, description, source } : null
+}
+
+export function normalizeInterests(value: unknown): ProfileData['interests'] {
+  const source = readSource(value)
+  const items = collectInterestItems(value)
+
+  return items.length > 0 ? { items, source } : null
+}
+
+function collectInterestItems(value: unknown): string[] {
+  if (!value) return []
+
+  if (Array.isArray(value)) {
+    return uniqueLabels(value.flatMap(collectInterestItems))
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+    if (trimmed.startsWith('{')) {
+      try {
+        return collectInterestItems(JSON.parse(trimmed) as unknown)
+      } catch {
+        return [trimmed]
+      }
+    }
+    return trimmed.split(',').map((item) => item.trim()).filter(Boolean)
+  }
+
+  if (typeof value !== 'object') return [String(value).trim()].filter(Boolean)
+
+  const record = value as Record<string, unknown>
+
+  if (Array.isArray(record.items)) {
+    return collectInterestItems(record.items)
+  }
+
+  const label =
+    readString(record.topic) ||
+    readString(record.title) ||
+    readString(record.name) ||
+    readString(record.label) ||
+    readString(record.text)
+  if (label) return [label]
+
+  return uniqueLabels(
+    Object.entries(record)
+      .filter(([key]) => key !== 'source' && key !== 'confidence' && key !== 'evidence')
+      .flatMap(([, item]) => collectInterestItems(item)),
+  )
+}
+
+function readSource(value: unknown): 'ai' | 'manual' {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const source = (value as Record<string, unknown>).source
+    if (source === 'manual') return 'manual'
+  }
+  return 'ai'
+}
+
+function readString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function uniqueLabels(items: string[]) {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const item of items) {
+    const label = item.trim()
+    if (!label || seen.has(label.toLowerCase())) continue
+    seen.add(label.toLowerCase())
+    result.push(label)
+  }
+
+  return result
 }
 
 /**
