@@ -166,6 +166,15 @@ function UploadPage() {
         </p>
       </div>
 
+      <div className="mb-6 rounded-2xl border border-sage-500/20 bg-sage-50 px-4 py-3">
+        <p className="text-sm font-semibold text-warm-900">
+          {t('Private by default')}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-warm-600">
+          {t('This upload is used for your dashboard and coach context. It is not shown to your partner by default, and Amore is not therapy or emergency support.')}
+        </p>
+      </div>
+
       {/* Step: File selection */}
       {step === 'select' && (
         <div
@@ -238,6 +247,12 @@ function UploadPage() {
               <span className="rounded-full bg-warm-100 px-3 py-1 text-xs font-medium text-warm-600">
                 {preview.messageCount.toLocaleString()} messages
               </span>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
+              <p className="text-xs leading-5 text-warm-600">
+                {t('Preview is only for you. Choose Analyze only if you want Amore to store this import and use it for insights and coach context.')}
+              </p>
             </div>
 
             {preview.dateRange && (

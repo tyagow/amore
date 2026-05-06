@@ -435,15 +435,20 @@ export function CoachSidebar({
         </div>
 
         {!showThreads && (
-          <div className="mt-3 flex items-center gap-2">
-            <span className="rounded-full border border-coral-200 bg-coral-50 px-2.5 py-1 text-[11px] font-medium text-coral-700">
-              {t('Context')}: {pageLabel}
-            </span>
-            {activeThread?.updatedAt && (
-              <span className="text-[11px] text-warm-400">
-                {t('Updated')} {formatThreadDate(activeThread.updatedAt, locale)}
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-coral-200 bg-coral-50 px-2.5 py-1 text-[11px] font-medium text-coral-700">
+                {t('Context')}: {pageLabel}
               </span>
-            )}
+              {activeThread?.updatedAt && (
+                <span className="text-[11px] text-warm-400">
+                  {t('Updated')} {formatThreadDate(activeThread.updatedAt, locale)}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] leading-4 text-warm-400">
+              {t('Private coach thread. Not therapy, emergency help, or abuse mediation.')}
+            </p>
           </div>
         )}
       </div>

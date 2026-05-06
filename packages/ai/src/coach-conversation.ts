@@ -8,6 +8,7 @@ import {
   withRetry,
 } from './config'
 import { getAILocaleInstruction, type AILocale } from './locale'
+import { getCoachSafetyInstruction } from './safety'
 
 export interface CoachContext {
   healthScore: number | null
@@ -138,6 +139,7 @@ Rules:
 - Keep most responses to 2-4 short paragraphs unless more depth is needed.
 - Never reference couple data, health scores, or partner-specific analysis — you don't have any.
 - You can discuss general relationship topics: attachment styles, communication patterns, conflict resolution, emotional intelligence, love languages, boundaries.`,
+    getCoachSafetyInstruction(locale),
     getCoachLocaleInstruction(locale),
   ]
 
@@ -171,6 +173,7 @@ Rules:
 - Ask questions only when missing information blocks a good answer.
 - Keep most responses to 2-4 short paragraphs unless the user clearly needs more depth.
 - If the available data is thin or missing, say that plainly.`,
+    getCoachSafetyInstruction(locale),
     getCoachLocaleInstruction(locale),
   ]
 

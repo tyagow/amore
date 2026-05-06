@@ -6,6 +6,12 @@ import {
   updateProfile,
   type ProfileData,
 } from '~/server/profile'
+import {
+  deleteMyImportedWhatsAppData,
+  exportMyImportData,
+  getImportDataSummary,
+  type ImportDataSummary,
+} from '~/server/data-controls'
 import { NotificationSettings } from './-components/notification-settings'
 import {
   buildCommunicationStyleDraft,
@@ -40,7 +46,8 @@ export const Route = createFileRoute('/_authenticated/profile')({
       getProfile(),
       getPartnerProfile(),
     ])
-    return { hasCouple: true as const, profile, partnerData }
+    const importSummary = await getImportDataSummary()
+    return { hasCouple: true as const, profile, partnerData, importSummary }
   },
   component: ProfilePage,
 })
@@ -231,6 +238,114 @@ function ProfileBridgeCard({
   )
 }
 
+function DataTrustCard({
+  summary,
+  onSummaryChange,
+}: {
+  summary: ImportDataSummary
+  onSummaryChange: (summary: ImportDataSummary) => void
+}) {
+  const { t } = useI18n()
+  const [busy, setBusy] = useState<'export' | 'delete' | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+
+  const handleExport = async () => {
+    setBusy('export')
+    setStatus(null)
+    try {
+      const payload = await exportMyImportData()
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `amore-whatsapp-imports-${new Date().toISOString().slice(0, 10)}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+      setStatus(t('Import data export prepared.'))
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : t('Failed to export import data.'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      t('Delete imported WhatsApp rows and import records from Amore? This does not delete anything from WhatsApp.'),
+    )
+    if (!confirmed) return
+
+    setBusy('delete')
+    setStatus(null)
+    try {
+      const result = await deleteMyImportedWhatsAppData()
+      const nextSummary = await getImportDataSummary()
+      onSummaryChange(nextSummary)
+      setStatus(
+        t(`Deleted ${result.deletedExports} imports and ${result.deletedImportedMessages} imported messages.`),
+      )
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : t('Failed to delete imported data.'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <section className="mb-8 rounded-2xl border border-warm-200 bg-white p-5 shadow-[0_1px_3px_rgba(42,33,24,0.04),0_8px_24px_rgba(42,33,24,0.04)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-warm-400">
+            {t('Privacy and data')}
+          </p>
+          <h2 className="mt-1 text-base font-semibold text-warm-900">
+            {t('Your import and coach data stay under your control')}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-warm-600">
+            {t('Uploaded WhatsApp exports are used to create your insights and coach context. Private coach threads are not shown to your partner unless you explicitly share them. Amore is not therapy or emergency support.')}
+          </p>
+        </div>
+        <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-700 sm:min-w-40">
+          <p className="font-semibold text-warm-900">{summary.exportCount.toLocaleString()} {t('imports')}</p>
+          <p className="mt-1 text-xs text-warm-500">
+            {summary.importedMessageCount.toLocaleString()} {t('imported messages')}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={busy !== null || summary.exportCount === 0}
+          className="rounded-xl border border-warm-200 px-4 py-2.5 text-sm font-semibold text-warm-700 transition-colors hover:bg-warm-50 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          {busy === 'export' ? t('Preparing export...') : t('Download import record')}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          disabled={busy !== null || summary.exportCount === 0}
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          {busy === 'delete' ? t('Deleting...') : t('Delete imported WhatsApp data')}
+        </button>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-warm-400">
+        {t('Deleting imported data removes upload records and imported message copies from Amore. It does not delete your WhatsApp history or messages your partner imported.')}
+      </p>
+      {status && (
+        <p className="mt-3 rounded-xl bg-warm-50 px-3 py-2 text-xs text-warm-600">
+          {status}
+        </p>
+      )}
+    </section>
+  )
+}
+
 // ── Page Component ──────────────────────────────────────
 
 function ProfilePage() {
@@ -254,6 +369,7 @@ function ProfilePage() {
 
   const [profile, setProfile] = useState(data.profile)
   const partnerData = data.partnerData!
+  const [importSummary, setImportSummary] = useState(data.importSummary)
 
   const [editing, setEditing] = useState<
     'love-languages' | 'communication' | 'interests' | null
@@ -436,6 +552,11 @@ function ProfilePage() {
         partnerLoveLanguage={partnerLoveLanguagePrimary}
         myCommunicationStyle={communicationType}
         partnerCommunicationStyle={partnerCommunicationType}
+      />
+
+      <DataTrustCard
+        summary={importSummary}
+        onSummaryChange={setImportSummary}
       />
 
       {/* ── Your Profile ─────────────────────────────────── */}

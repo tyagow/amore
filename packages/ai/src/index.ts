@@ -1,6 +1,7 @@
 export { analyzeConversation, type AnalysisResult } from './analyze'
 export { generateCoachingTips, generateMoodCoaching, type CoachingTip, type MoodCoachingInput } from './coach'
 export * from './coach-conversation'
+export * from './safety'
 export { extractEntities, type ExtractedEntities } from './extract'
 export { AIParseError } from './config'
 export { getAILocaleInstruction, localized, normalizeAILocale, type AILocale } from './locale'

@@ -233,6 +233,15 @@ function WhatsAppPage() {
           with your phone to pair.
         </p>
 
+        <div className="mb-6 rounded-xl border border-sage-500/20 bg-sage-50 px-4 py-3">
+          <p className="text-sm font-semibold text-warm-900">
+            {t('You choose what becomes shared')}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-warm-600">
+            {t('Amore uses your selected partner chat for insights and coach context. Private coach threads and imported files are not shared with your partner unless you explicitly share them.')}
+          </p>
+        </div>
+
         {/* ── Status indicator ───────────────────────────────────── */}
         <div className="flex items-center gap-2 mb-6">
           <div className={`w-2.5 h-2.5 rounded-full ${statusColor}`} />
@@ -283,6 +292,9 @@ function WhatsAppPage() {
             </p>
             <p className="text-sm text-warm-500 mb-4">
               Choose which WhatsApp contact is your partner so Amore can sync your conversations.
+            </p>
+            <p className="mb-4 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-xs leading-5 text-warm-600">
+              {t('Only choose a 1:1 partner chat. Do not use this for crisis, abuse, or safety mediation.')}
             </p>
 
             {/* Search input */}
