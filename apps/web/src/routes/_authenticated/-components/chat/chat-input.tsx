@@ -16,6 +16,7 @@ import { buildSpaceDraft } from "./space-draft";
 import { buildFollowUpDraft } from "./follow-up-draft";
 import { buildCoachReviewPrompt } from "./coach-review-prompt";
 import { getHeatedDraftWarning } from "./heated-draft";
+import { getSafetyRoutingDraft } from "./safety-routing";
 import { buildBidRepairDraft } from "./bid-repair-draft";
 import { buildGoalDraftFromChatDraft } from "./chat-goal-draft";
 import { buildAftercareDraft } from "./aftercare-draft";
@@ -136,6 +137,13 @@ export function ChatInput({
   };
 
   const handleSend = () => {
+    const safetyRouting = getSafetyRoutingDraft(inputText, locale);
+    if (safetyRouting) {
+      setInputText(safetyRouting.draft);
+      setComposerMode("improve");
+      focusTextarea();
+      return;
+    }
     const preparedDraft = prepareDraftForSend(inputText, locale);
     if (!preparedDraft.text || disabled) return;
     if (!preparedDraft.ready) {
@@ -153,6 +161,13 @@ export function ChatInput({
   const handleReview = () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
+    const safetyRouting = getSafetyRoutingDraft(trimmed, locale);
+    if (safetyRouting) {
+      setInputText(safetyRouting.draft);
+      setComposerMode("improve");
+      focusTextarea();
+      return;
+    }
     onReview(trimmed);
   };
 
@@ -327,6 +342,18 @@ export function ChatInput({
     focusTextarea();
   };
 
+  const handleOwnMyPart = () => {
+    setInputText(buildDraftWithOwnership(inputText, locale));
+    setComposerMode("improve");
+    focusTextarea();
+  };
+
+  const handleAskBetterQuestion = () => {
+    setInputText(buildDraftWithClearAsk(inputText, locale));
+    setComposerMode("improve");
+    focusTextarea();
+  };
+
   const handleFollowUpDraft = () => {
     setInputText(buildFollowUpDraft(inputText, locale));
     focusTextarea();
@@ -354,6 +381,7 @@ export function ChatInput({
   };
 
   const heatedWarning = getHeatedDraftWarning(inputText);
+  const safetyRouting = getSafetyRoutingDraft(inputText, locale);
   const draftCareChecks = inputText.trim() ? getDraftCareChecks(inputText) : [];
   const starters = getStarters(locale);
   const missingSpecificMoment = draftCareChecks.some(
@@ -516,6 +544,22 @@ export function ChatInput({
               className="shrink-0 rounded-full border border-coral-200 bg-white px-3 py-1.5 text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-50"
             >
               {t("Apology guide")}
+            </button>
+            <button
+              type="button"
+              onClick={handleOwnMyPart}
+              disabled={!inputText.trim()}
+              className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("Own my part")}
+            </button>
+            <button
+              type="button"
+              onClick={handleAskBetterQuestion}
+              disabled={!inputText.trim()}
+              className="shrink-0 rounded-full border border-coral-200 bg-coral-50 px-3 py-1.5 text-xs font-semibold text-coral-700 transition-colors hover:bg-coral-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("Ask better question")}
             </button>
             <button
               type="button"
@@ -1026,7 +1070,27 @@ export function ChatInput({
           )}
         </div>
       )}
-      {composerMode === "improve" && heatedWarning && (
+      {composerMode === "improve" && safetyRouting && (
+        <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5">
+          <p className="text-xs font-semibold text-red-900">
+            {safetyRouting.title}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-red-800">
+            {safetyRouting.body}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setInputText(safetyRouting.draft);
+              focusTextarea();
+            }}
+            className="mt-2 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-800"
+          >
+            {t("Use safety note")}
+          </button>
+        </div>
+      )}
+      {composerMode === "improve" && !safetyRouting && heatedWarning && (
         <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5">
           <p className="text-xs font-semibold text-amber-900">
             {heatedWarning.title}
@@ -1185,6 +1249,22 @@ export function ChatInput({
               title={t("Turn this into a 20-minute pause request")}
             >
               {t("Pause")}
+            </button>
+            <button
+              onClick={handleOwnMyPart}
+              disabled={!inputText.trim()}
+              className="whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-medium text-warm-500 transition-colors hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+              title={t("Add ownership before sending")}
+            >
+              {t("Own my part")}
+            </button>
+            <button
+              onClick={handleAskBetterQuestion}
+              disabled={!inputText.trim()}
+              className="whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-medium text-warm-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+              title={t("Turn this into an answerable question")}
+            >
+              {t("Ask better question")}
             </button>
             <button
               onClick={handleFollowUpDraft}
