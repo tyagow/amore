@@ -285,13 +285,13 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
       </p>
 
       {/* Mood selector */}
-      <div className="flex justify-between gap-1 mb-4">
+      <div className="mb-4 grid grid-cols-5 gap-1 sm:gap-2">
         {MOODS.map((m) => (
           <button
             key={m.value}
             type="button"
             onClick={() => setSelectedMood(m.value)}
-            className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all ${
+            className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-3 transition-all sm:px-4 ${
               selectedMood === m.value
                 ? 'bg-coral-50 ring-2 ring-coral-400 scale-110 shadow-md'
                 : selectedMood
@@ -299,8 +299,8 @@ export function DailyCheckinCard({ data, partnerName }: { data: CheckinData; par
                   : 'hover:bg-warm-50 hover:scale-105'
             }`}
           >
-            <span className="text-[40px]">{m.emoji}</span>
-            <span className="text-xs text-warm-600">{m.label}</span>
+            <span className="text-[30px] leading-none sm:text-[40px]">{m.emoji}</span>
+            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{m.label}</span>
           </button>
         ))}
       </div>

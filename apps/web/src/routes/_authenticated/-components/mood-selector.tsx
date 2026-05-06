@@ -81,7 +81,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
       </h3>
 
       {/* Mood buttons */}
-      <div className="flex justify-between gap-1">
+      <div className="grid grid-cols-5 gap-1 sm:gap-2">
         {MOODS.map((m) => (
           <button
             key={m.value}
@@ -91,7 +91,7 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
               setVisibility(null)
               setSelectedSupport(null)
             }}
-            className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all ${
+            className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-3 transition-all sm:px-4 ${
               selectedMood === m.value
                 ? 'bg-coral-50 ring-2 ring-coral-400 scale-110 shadow-md animate-mood-bounce'
                 : selectedMood
@@ -99,8 +99,8 @@ export function MoodSelector({ onMoodSet }: { onMoodSet?: () => void }) {
                   : 'hover:bg-warm-50 hover:scale-105'
             }`}
           >
-            <span className="text-[40px]">{m.emoji}</span>
-            <span className="text-xs text-warm-600">{m.label}</span>
+            <span className="text-[30px] leading-none sm:text-[40px]">{m.emoji}</span>
+            <span className="max-w-full truncate text-[11px] text-warm-600 sm:text-xs">{m.label}</span>
           </button>
         ))}
       </div>

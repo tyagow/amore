@@ -24,12 +24,13 @@ export function Nav({
     await signOut()
     navigate({ to: '/' })
   }
+  const hasPendingRequests = pendingRequestCount != null && pendingRequestCount > 0
 
   return (
     <>
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-warm-50/80 backdrop-blur-lg border-t border-warm-200 md:hidden pb-safe">
-        <div className="flex items-center justify-around px-2 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-warm-200 bg-warm-50/90 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-lg md:hidden">
+        <div className="grid grid-cols-5 items-stretch gap-1">
           <NavItem
             to="/dashboard"
             label={t('Home')}
@@ -45,25 +46,28 @@ export function Nav({
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
             </svg>
           </NavItem>
-          <NavItem to="/goals" label={t('Goals')}>
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </NavItem>
+          {hasPendingRequests ? (
+            <NavItem to="/connect" label={t('Connect')}>
+              <span className="relative">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {pendingRequestCount}
+                </span>
+              </span>
+            </NavItem>
+          ) : (
+            <NavItem to="/goals" label={t('Goals')}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </NavItem>
+          )}
           <NavItem to="/chat" label={t('Chat')}>
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-            </svg>
-          </NavItem>
-          <NavItem to="/whatsapp" label={t('WhatsApp')}>
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-            </svg>
-          </NavItem>
-          <NavItem to="/profile" label={t('Profile')}>
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
           </NavItem>
           {onCoachToggle && (
@@ -77,18 +81,6 @@ export function Nav({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.674M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.37 3.37 0 0 0 14 18.47V19a2 2 0 1 1-4 0v-.53c0-.895-.356-1.755-.988-2.387l-.547-.547Z" />
               </svg>
             </NavButtonItem>
-          )}
-          {pendingRequestCount != null && pendingRequestCount > 0 && (
-            <NavItem to="/connect" label={t('Connect')}>
-              <span className="relative">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                </svg>
-                <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
-                  {pendingRequestCount}
-                </span>
-              </span>
-            </NavItem>
           )}
         </div>
       </nav>
@@ -206,7 +198,7 @@ function NavItem({
     <Link
       to={to}
       search={search}
-      className="relative flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-lg text-warm-400 transition-colors"
+      className="relative flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-warm-400 transition-colors"
       activeProps={{ className: 'text-coral-500 border-t-2 border-coral-500 -mt-[2px]' }}
     >
       <span className="relative">
@@ -218,7 +210,7 @@ function NavItem({
           />
         )}
       </span>
-      <span className="text-[10px] font-medium">{label}</span>
+      <span className="max-w-full truncate text-[10px] font-medium leading-none">{label}</span>
     </Link>
   )
 }
@@ -239,7 +231,7 @@ function NavButtonItem({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-lg transition-colors ${
+      className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors ${
         active
           ? 'text-coral-500 border-t-2 border-coral-500 -mt-[2px]'
           : 'text-warm-400'
@@ -251,7 +243,7 @@ function NavButtonItem({
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
         )}
       </span>
-      <span className="text-[10px] font-medium">{label}</span>
+      <span className="max-w-full truncate text-[10px] font-medium leading-none">{label}</span>
     </button>
   )
 }
