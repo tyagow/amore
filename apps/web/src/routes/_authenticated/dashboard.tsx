@@ -29,6 +29,11 @@ import { RelationshipMoveCard } from './-components/relationship-move-card'
 import { RelationshipPracticeDeck } from './-components/relationship-practice-deck'
 import { RepairChoiceCard } from './-components/repair-choice-card'
 import { WeeklyResetRitual } from './-components/weekly-reset-ritual'
+import { PersonalizedRitualCard } from './-components/personalized-ritual-card'
+import {
+  selectPersonalizedRitual,
+  type RitualHistoryEntry,
+} from './-components/personalized-ritual-engine'
 import { getDailyCheckin } from '~/server/checkin'
 import {
   isUpgradeGateDetail,
@@ -247,6 +252,20 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
   const [showMoodDetections, setShowMoodDetections] = useState(
     data.pendingMoodDetections.length > 0,
   )
+  const todayKey = new Date().toISOString().slice(0, 10)
+  const [ritualHistory, setRitualHistory] = useState<RitualHistoryEntry[]>([])
+  const ritualCooldownHistory = ritualHistory.filter((entry) => entry.dateKey !== todayKey)
+  const selectedRitual = selectPersonalizedRitual({
+    dateKey: todayKey,
+    healthScore: data.couple.healthScore,
+    messagesSinceAnalysis: data.couple.messagesSinceAnalysis,
+    hasActiveGoals: data.activeGoals.length > 0,
+    partnerMoodSet: !!data.partnerMood,
+    myMood: data.myMood?.mood ?? null,
+    partnerMood: data.partnerMood?.mood ?? null,
+    partnerInterests: data.partnerProfile?.interests,
+    recentCheckins: data.dailyCheckin.recentCheckins,
+  }, ritualCooldownHistory)
 
   // Poll for updates while onboarding is incomplete
   useEffect(() => {
@@ -256,6 +275,40 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
     }, 5000)
     return () => clearInterval(interval)
   }, [data.couple.healthScore, router])
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('amore-ritual-history-v1')
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved)
+      if (!Array.isArray(parsed)) return
+      setRitualHistory(
+        parsed.filter((entry): entry is RitualHistoryEntry =>
+          Boolean(
+            entry &&
+            typeof entry === 'object' &&
+            typeof entry.id === 'string' &&
+            typeof entry.dateKey === 'string',
+          ),
+        ),
+      )
+    } catch {
+      window.localStorage.removeItem('amore-ritual-history-v1')
+    }
+  }, [])
+
+  useEffect(() => {
+    setRitualHistory((current) => {
+      const withoutToday = current.filter((entry) => entry.dateKey !== todayKey)
+      const next = [
+        { id: selectedRitual.id, dateKey: todayKey },
+        ...withoutToday,
+      ].slice(0, 14)
+      window.localStorage.setItem('amore-ritual-history-v1', JSON.stringify(next))
+      return next
+    })
+  }, [selectedRitual.id, todayKey])
 
   const handleAnalyze = async () => {
     setAnalyzing(true)
@@ -304,6 +357,7 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
         messagesSinceAnalysis={data.couple.messagesSinceAnalysis}
         hasGoals={data.activeGoals.length > 0}
         partnerMoodSet={!!data.partnerMood}
+        ritual={selectedRitual}
         onOpenCoach={(prompt) => {
           if (prompt) {
             window.localStorage.setItem('amore-coach-draft', prompt)
@@ -313,6 +367,16 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
       />
 
       <HotMomentResetCard />
+
+      <PersonalizedRitualCard
+        ritual={selectedRitual}
+        partnerName={data.partner?.name ?? 'your partner'}
+        dailyCheckin={data.dailyCheckin}
+        onOpenCoach={(prompt) => {
+          window.localStorage.setItem('amore-coach-draft', prompt)
+          window.dispatchEvent(new CustomEvent('amore:open-coach'))
+        }}
+      />
 
       <RepairChoiceCard partnerName={data.partner?.name ?? 'your partner'} />
 
@@ -352,7 +416,10 @@ function CouplesDashboard({ data }: { data: Extract<ReturnType<typeof Route.useL
 
       <RelationshipPracticeDeck partnerName={data.partner?.name ?? 'your partner'} />
 
-      <WeeklyResetRitual partnerName={data.partner?.name ?? 'your partner'} />
+      <WeeklyResetRitual
+        partnerName={data.partner?.name ?? 'your partner'}
+        suggestedRitual={selectedRitual}
+      />
 
       {data.couple.healthScore == null && (
         <OnboardingCard

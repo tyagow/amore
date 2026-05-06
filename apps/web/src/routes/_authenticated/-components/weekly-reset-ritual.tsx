@@ -7,6 +7,7 @@ import {
 } from './weekly-reset-draft'
 import { useI18n } from '~/lib/i18n'
 import { storeChatDraft, storeGoalDraft } from '~/lib/chat-draft-storage'
+import type { PersonalizedRitual } from './personalized-ritual-engine'
 
 const WEEKLY_RESET_STEPS = [
   {
@@ -31,13 +32,27 @@ const WEEKLY_RESET_STEPS = [
   },
 ]
 
-export function WeeklyResetRitual({ partnerName }: { partnerName: string }) {
+export function WeeklyResetRitual({
+  partnerName,
+  suggestedRitual,
+}: {
+  partnerName: string
+  suggestedRitual?: PersonalizedRitual
+}) {
   const { locale, t } = useI18n()
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
   const [stepNotes, setStepNotes] = useState<Record<string, string>>({})
   const storageKey = 'amore-weekly-reset-progress'
   const notesStorageKey = 'amore-weekly-reset-notes'
-  const draft = buildWeeklyResetDraft(partnerName, stepNotes, locale)
+  const weeklyRitualLine = suggestedRitual?.weeklyReportLine(partnerName)
+  const draft = [
+    buildWeeklyResetDraft(partnerName, stepNotes, locale),
+    weeklyRitualLine
+      ? locale === 'pt-BR'
+        ? `Pratica pequena sugerida para esta semana: ${weeklyRitualLine}`
+        : `Suggested small practice for this week: ${weeklyRitualLine}`
+      : null,
+  ].filter(Boolean).join('\n\n')
   const needDraft = buildWeeklyNeedRequestDraft(partnerName, stepNotes, locale)
   const promiseGoalDraft = buildWeeklyPromiseGoalDraft(stepNotes, locale)
   const progress = Math.round((completedSteps.length / WEEKLY_RESET_STEPS.length) * 100)
@@ -109,6 +124,11 @@ export function WeeklyResetRitual({ partnerName }: { partnerName: string }) {
           <p className="mt-2 text-sm leading-relaxed text-warm-600">
             {t('The app should help you build a relationship habit, not just inspect data. Do this once a week when things are calm.')}
           </p>
+          {suggestedRitual && (
+            <p className="mt-3 rounded-2xl bg-lavender-50 px-3 py-2 text-xs leading-relaxed text-lavender-800">
+              {t('This week should stay tied to the daily ritual:')} {t(suggestedRitual.title)}
+            </p>
+          )}
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs font-medium text-warm-500">
               <span>

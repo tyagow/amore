@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useI18n } from '~/lib/i18n'
 import { storeChatDraft } from '~/lib/chat-draft-storage'
+import type { PersonalizedRitual } from './personalized-ritual-engine'
 
 export function RelationshipMoveCard({
   partnerName,
@@ -9,6 +10,7 @@ export function RelationshipMoveCard({
   messagesSinceAnalysis,
   hasGoals,
   partnerMoodSet,
+  ritual,
   onOpenCoach,
 }: {
   partnerName: string
@@ -16,6 +18,7 @@ export function RelationshipMoveCard({
   messagesSinceAnalysis: number | null
   hasGoals: boolean
   partnerMoodSet: boolean
+  ritual?: PersonalizedRitual
   onOpenCoach: (prompt?: string) => void
 }) {
   const { locale, t } = useI18n()
@@ -23,14 +26,17 @@ export function RelationshipMoveCard({
   const score = healthScore ?? 0
   const needsRepair = healthScore !== null && score < 70
   const needsFreshAnalysis = !!messagesSinceAnalysis && messagesSinceAnalysis >= 20
+  const selectedRitual = needsRepair ? null : ritual
   const repairDraft = buildRelationshipRepairDraft(partnerName, locale)
-  const coachPrompt = needsRepair
-    ? `Help me prepare a 10-minute repair conversation with ${partnerName}. I want to start with appreciation, own my part, and ask what felt heavy without sounding defensive.`
-    : !partnerMoodSet
-      ? `Help me invite ${partnerName} into a soft daily check-in that feels caring, not demanding.`
-      : !hasGoals
-        ? 'Help me choose one tiny relationship goal for this week that we can actually keep.'
-        : `Help me write one specific caring message to ${partnerName} today.`
+  const coachPrompt = selectedRitual
+    ? selectedRitual.coachPrompt(partnerName)
+    : needsRepair
+      ? `Help me prepare a 10-minute repair conversation with ${partnerName}. I want to start with appreciation, own my part, and ask what felt heavy without sounding defensive.`
+      : !partnerMoodSet
+        ? `Help me invite ${partnerName} into a soft daily check-in that feels caring, not demanding.`
+        : !hasGoals
+          ? 'Help me choose one tiny relationship goal for this week that we can actually keep.'
+          : `Help me write one specific caring message to ${partnerName} today.`
 
   const move = needsRepair
     ? {
@@ -43,6 +49,14 @@ export function RelationshipMoveCard({
         primary: 'Ask coach how',
         secondary: 'Start repair guide',
       }
+    : selectedRitual
+      ? {
+          label: 'Today\'s relationship move',
+          title: selectedRitual.title,
+          body: selectedRitual.body,
+          primary: 'Coach me through it',
+          secondary: selectedRitual.actionLabel,
+        }
     : !partnerMoodSet
       ? {
           label: 'Today\'s relationship move',
@@ -107,6 +121,11 @@ export function RelationshipMoveCard({
           ) : (
             <Link
               to={move.secondary === 'Create goal' ? '/goals' : '/chat'}
+              onClick={() => {
+                if (selectedRitual) {
+                  storeChatDraft(selectedRitual.chatDraft(partnerName, locale), locale)
+                }
+              }}
               className="rounded-xl border border-coral-200 bg-white px-4 py-3 text-center text-sm font-semibold text-coral-700 transition-colors hover:bg-coral-50"
             >
               {t(move.secondary)}
