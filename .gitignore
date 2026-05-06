@@ -8,3 +8,4 @@ dist/
 thoughts/
 .worktrees/
 backups/
+.playwright-mcp/
