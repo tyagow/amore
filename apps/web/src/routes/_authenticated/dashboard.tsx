@@ -35,6 +35,10 @@ import {
   selectPersonalizedRitual,
   type RitualHistoryEntry,
 } from './-components/personalized-ritual-engine'
+import {
+  PARTNER_INVITE_UNLOCKS,
+  buildPartnerInvitePrivacyNote,
+} from './-components/partner-invite-value'
 import { getDailyCheckin } from '~/server/checkin'
 import {
   isUpgradeGateDetail,
@@ -211,8 +215,18 @@ function SoloOnboarding({ pendingRequests }: {
           <div>
             <h3 className="text-base font-semibold text-warm-700 mb-1">Connect with your partner</h3>
             <p className="text-sm text-warm-400 leading-relaxed">
-              Invite your partner to unlock live WhatsApp analysis, shared goals, and mood tracking.
+              Invite your partner to unlock live insights, shared goals, rituals, and mood sync.
             </p>
+            <p className="mt-2 text-xs leading-relaxed text-warm-400">
+              {buildPartnerInvitePrivacyNote(false)}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {PARTNER_INVITE_UNLOCKS.slice(0, 3).map((unlock) => (
+                <span key={unlock} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-warm-500">
+                  {unlock}
+                </span>
+              ))}
+            </div>
           </div>
           <svg className="h-5 w-5 shrink-0 mt-1 text-warm-300 group-hover:text-warm-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

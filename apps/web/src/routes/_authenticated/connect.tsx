@@ -8,6 +8,11 @@ import {
   declineConnectionRequest,
   getMyCouple,
 } from '~/server/connections'
+import {
+  PARTNER_INVITE_UNLOCKS,
+  buildPartnerInvitePrivacyNote,
+  getConnectionDisplayMode,
+} from './-components/partner-invite-value'
 
 export const Route = createFileRoute('/_authenticated/connect')({
   component: ConnectPage,
@@ -36,10 +41,13 @@ function ConnectPage() {
   const [pendingRequests, setPendingRequests] = useState(initialPending)
   const [sentRequests, setSentRequests] = useState(initialSent)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const connectionMode = getConnectionDisplayMode(coupleData?.couple.status)
+  const activeCoupleData = connectionMode === 'connected' ? coupleData : null
+  const hasPrivateImport = connectionMode === 'solo-value'
 
   // SSE: listen for real-time connection events
   useEffect(() => {
-    if (coupleData) return
+    if (activeCoupleData) return
 
     const source = new EventSource('/sse/user-events')
 
@@ -57,11 +65,11 @@ function ConnectPage() {
     }
 
     return () => source.close()
-  }, [coupleData, router])
+  }, [activeCoupleData, router])
 
   // Poll every 30s as fallback
   useEffect(() => {
-    if (coupleData) return
+    if (activeCoupleData) return
 
     const interval = setInterval(async () => {
       const [pending, sent] = await Promise.all([
@@ -73,10 +81,10 @@ function ConnectPage() {
     }, 30_000)
 
     return () => clearInterval(interval)
-  }, [coupleData])
+  }, [activeCoupleData])
 
   // Connected state
-  if (coupleData) {
+  if (activeCoupleData) {
     return (
       <div className="max-w-lg mx-auto px-6 py-16">
         <div className="bg-warm-100 rounded-2xl shadow-lg p-8 text-center">
@@ -89,10 +97,10 @@ function ConnectPage() {
           <p className="text-warm-600 mb-1">
             You are connected with{' '}
             <span className="font-semibold text-warm-900">
-              {coupleData.partner?.name ?? coupleData.partner?.email}
+              {activeCoupleData.partner?.name ?? activeCoupleData.partner?.email}
             </span>
           </p>
-          <p className="text-sm text-warm-400 mb-6">{coupleData.partner?.email}</p>
+          <p className="text-sm text-warm-400 mb-6">{activeCoupleData.partner?.email}</p>
           <button
             onClick={() => navigate({ to: '/dashboard' as string })}
             className="px-6 py-2.5 bg-coral-500 text-white rounded-lg font-medium hover:bg-coral-600 transition-colors"
@@ -156,10 +164,29 @@ function ConnectPage() {
       {/* Header */}
       <div className="text-center">
         <h1 className="font-display text-3xl text-warm-900 mb-2">
-          Connect with your partner
+          {hasPrivateImport ? 'Invite your partner when you are ready' : 'Connect with your partner'}
         </h1>
         <p className="text-warm-500 text-sm">
-          Send a connection request to start using Amore together.
+          {hasPrivateImport
+            ? 'You already have private value from your import. Inviting your partner unlocks the shared loop.'
+            : 'Send a connection request after you have enough value to make the invite worthwhile.'}
+        </p>
+      </div>
+
+      <div className="bg-white border border-warm-200 rounded-2xl shadow-sm p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-coral-600">
+          What partner mode unlocks
+        </p>
+        <div className="mt-4 grid gap-2">
+          {PARTNER_INVITE_UNLOCKS.map((unlock) => (
+            <div key={unlock} className="flex items-start gap-3 rounded-xl bg-warm-50 px-3 py-2">
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-coral-500" />
+              <span className="text-sm font-medium text-warm-800">{unlock}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 rounded-xl bg-coral-50 px-3 py-2 text-xs leading-relaxed text-coral-800">
+          {buildPartnerInvitePrivacyNote(hasPrivateImport)}
         </p>
       </div>
 
@@ -229,7 +256,7 @@ function ConnectPage() {
           Invite your partner
         </h2>
         <p className="text-warm-500 text-sm mb-4">
-          Enter their email address. They&apos;ll need an Amore account to accept.
+          Enter their email address. They&apos;ll need an Amore account to accept; your private import preview is not included in the invite.
         </p>
 
         <form onSubmit={handleSendRequest} className="space-y-3">
