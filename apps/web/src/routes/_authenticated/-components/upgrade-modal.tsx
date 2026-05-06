@@ -3,6 +3,7 @@ import {
   UPGRADE_EVENT,
   type UpgradeGateDetail,
 } from '~/lib/upgrade-gate'
+import { useI18n } from '~/lib/i18n'
 
 const FEATURE_COPY: Record<string, {
   eyebrow: string
@@ -78,13 +79,13 @@ const FEATURE_COPY: Record<string, {
   },
 }
 
-function formatResetAt(resetAt?: string) {
+function formatResetAt(resetAt: string | undefined, locale: string) {
   if (!resetAt) return null
 
   const parsed = new Date(resetAt)
   if (Number.isNaN(parsed.getTime())) return null
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale === 'pt-BR' ? 'pt-BR' : 'en-US', {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -93,6 +94,7 @@ function formatResetAt(resetAt?: string) {
 }
 
 export function UpgradeModal() {
+  const { locale, t } = useI18n()
   const [detail, setDetail] = useState<UpgradeGateDetail | null>(null)
 
   useEffect(() => {
@@ -132,13 +134,13 @@ export function UpgradeModal() {
 
   if (!detail || !copy) return null
 
-  const resetAt = formatResetAt(detail.resetAt)
+  const resetAt = formatResetAt(detail.resetAt, locale)
   const upgradeUrl = detail.upgradeUrl ?? '/pricing'
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-warm-950/45 px-4 pb-4 pt-12 sm:items-center">
       <button
-        aria-label="Close upgrade modal"
+        aria-label={t('Close upgrade modal')}
         className="absolute inset-0 cursor-default"
         onClick={() => setDetail(null)}
       />
@@ -146,13 +148,13 @@ export function UpgradeModal() {
       <div className="relative w-full max-w-lg overflow-hidden rounded-[2rem] bg-[linear-gradient(180deg,_rgba(255,250,246,0.98)_0%,_rgba(255,244,236,0.98)_100%)] shadow-[0_24px_70px_rgba(42,33,24,0.28)]">
         <div className="border-b border-coral-100 bg-coral-500 px-6 py-5 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-coral-100">
-            {copy.eyebrow}
+            {t(copy.eyebrow)}
           </p>
           <h2 className="mt-2 font-display text-3xl leading-tight">
-            {copy.title}
+            {t(copy.title)}
           </h2>
           <p className="mt-3 max-w-md text-sm leading-6 text-coral-50">
-            {copy.description}
+            {t(copy.description)}
           </p>
         </div>
 
@@ -161,12 +163,12 @@ export function UpgradeModal() {
             <div className="rounded-2xl border border-coral-100 bg-white/80 p-4 text-sm text-warm-700">
               {typeof detail.limit === 'number' && (
                 <p>
-                  You have used {detail.used ?? detail.limit} of {detail.limit} free uses for this window.
+                  {t('You have used')} {detail.used ?? detail.limit} {t('of')} {detail.limit} {t('free uses for this window.')}
                 </p>
               )}
               {resetAt && (
                 <p className="mt-1 text-warm-500">
-                  Free access resets on {resetAt}.
+                  {t('Free access resets on')} {resetAt}.
                 </p>
               )}
             </div>
@@ -183,7 +185,7 @@ export function UpgradeModal() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="m5 12 4 4L19 6" />
                   </svg>
                 </div>
-                <p className="text-sm text-warm-800">{bullet}</p>
+                <p className="text-sm text-warm-800">{t(bullet)}</p>
               </div>
             ))}
           </div>
@@ -193,13 +195,13 @@ export function UpgradeModal() {
               href={upgradeUrl}
               className="flex-1 rounded-full bg-coral-500 px-5 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-coral-600"
             >
-              See premium plans
+              {t('See premium plans')}
             </a>
             <button
               onClick={() => setDetail(null)}
               className="rounded-full border border-warm-300 px-5 py-3 text-sm font-semibold text-warm-700 transition-colors hover:bg-white"
             >
-              Maybe later
+              {t('Maybe later')}
             </button>
           </div>
         </div>

@@ -689,32 +689,58 @@ const PT_BR_COPY: Record<string, string> = {
   "Check if landed": "Checar como chegou",
   "Make follow-through goal": "Criar meta de continuidade",
   "Not enough data": "Dados insuficientes",
+  "Daily limit reached": "Limite diario atingido",
+  "Weekly limit reached": "Limite semanal atingido",
+  "Premium feature": "Recurso premium",
   "Keep the coach conversation going": "Manter a conversa com o orientador",
   "Free accounts include 3 coach messages per day. Premium removes that cap so support is available whenever a relationship moment is happening.":
     "Contas gratis incluem 3 mensagens ao orientador por dia. Premium remove esse limite para o apoio estar disponivel sempre que um momento do relacionamento acontecer.",
+  "Unlimited coach conversations": "Conversas ilimitadas com o orientador",
+  "Unlimited tone reviews and reply suggestions":
+    "Revisoes de tom e sugestoes de resposta ilimitadas",
+  "Advanced relationship insights": "Insights avancados do relacionamento",
   "Review every message before you send it":
     "Revisar cada mensagem antes de enviar",
   "Free accounts get 1 tone review per day. Premium keeps revision support available for every important message.":
     "Contas gratis recebem 1 revisao de tom por dia. Premium mantem apoio de revisao para cada mensagem importante.",
+  "Unlimited tone reviews": "Revisoes de tom ilimitadas",
+  "AI reply suggestions": "Sugestoes de resposta da IA",
+  "Live mood analysis during chat":
+    "Analise de humor ao vivo durante o chat",
   "Run analysis whenever your relationship needs a reset":
     "Rodar analise sempre que o relacionamento precisar de reinicio",
   "Free accounts include 1 full analysis each week. Premium unlocks unlimited re-analysis as conversations evolve.":
     "Contas gratis incluem 1 analise completa por semana. Premium libera reanalises ilimitadas conforme as conversas evoluem.",
+  "Unlimited manual analysis": "Analises manuais ilimitadas",
+  "Advanced insights tabs": "Abas de insights avancadas",
+  "Persistent coaching context": "Contexto persistente de orientacao",
   "Premium can draft helpful responses in the tone your relationship needs right now.":
     "Premium pode rascunhar respostas uteis no tom que seu relacionamento precisa agora.",
+  "Context-aware reply suggestions":
+    "Sugestoes de resposta com contexto",
+  "Live mood analysis": "Analise de humor ao vivo",
+  "Unlimited coach support": "Apoio ilimitado do orientador",
   "See the emotional temperature in real time":
     "Ver a temperatura emocional em tempo real",
   "Premium monitors the live conversation so you can adjust before a message lands the wrong way.":
     "Premium monitora a conversa ao vivo para voce ajustar antes que uma mensagem chegue errado.",
+  "Reply suggestions": "Sugestoes de resposta",
+  "Advanced insights": "Insights avancados",
   "Customize your relationship profile":
     "Personalizar seu perfil de relacionamento",
   "Premium lets you override AI-detected patterns with the way you and your partner actually communicate.":
     "Premium permite substituir padroes detectados pela IA pelo jeito que voce e sua parceria realmente se comunicam.",
+  "Edit profile signals manually": "Editar sinais do perfil manualmente",
+  "Improve coaching accuracy": "Melhorar a precisao da orientacao",
+  "Unlock advanced insights": "Liberar insights avancados",
   "Unlock premium access": "Liberar acesso premium",
   "Upgrade to Amore Premium to remove limits and unlock the full relationship support toolkit.":
     "Faca upgrade para Amore Premium para remover limites e liberar todo o kit de apoio ao relacionamento.",
+  "Unlimited coach and AI tools": "Ferramentas ilimitadas de orientador e IA",
+  "Editable relationship profile": "Perfil de relacionamento editavel",
   "Close upgrade modal": "Fechar modal de upgrade",
   "You have used": "Voce usou",
+  "of": "de",
   "free uses for this window.": "usos gratis nesta janela.",
   "Free access resets on": "O acesso gratis reinicia em",
   "What did I notice and value this week?":
