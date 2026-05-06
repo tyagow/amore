@@ -5,7 +5,7 @@ export const Route = createFileRoute('/')({
   beforeLoad: async () => {
     const session = await getAuthSession()
     if (session) {
-      throw redirect({ to: '/dashboard' })
+      throw redirect({ to: '/dashboard', search: { upgraded: false } })
     }
   },
   component: Home,

@@ -89,7 +89,7 @@ export function Nav({
       {/* Desktop sidebar nav */}
       <nav className="hidden md:flex fixed left-0 top-0 bottom-0 z-50 w-64 flex-col bg-warm-50 border-r border-warm-200">
         <div className="px-6 py-6">
-          <Link to="/dashboard" className="text-2xl font-display italic text-coral-500 tracking-tight">
+          <Link to="/dashboard" search={{ upgraded: false }} className="text-2xl font-display italic text-coral-500 tracking-tight">
             Amore
           </Link>
         </div>

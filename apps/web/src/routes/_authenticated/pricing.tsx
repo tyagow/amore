@@ -166,6 +166,7 @@ function PricingPage() {
 
               <Link
                 to="/dashboard"
+                search={{ upgraded: false }}
                 className="text-center text-sm font-medium text-warm-500 transition-colors hover:text-warm-700"
               >
                 Back to dashboard

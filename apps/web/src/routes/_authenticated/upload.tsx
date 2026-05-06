@@ -308,7 +308,7 @@ function UploadPage() {
           </div>
 
           <button
-            onClick={() => navigate({ to: '/dashboard' })}
+            onClick={() => navigate({ to: '/dashboard', search: { upgraded: false } })}
             className="w-full rounded-xl bg-coral-500 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-coral-600"
           >
             View full dashboard

@@ -233,6 +233,7 @@ function ProfilePage() {
         </div>
         <Link
           to="/dashboard"
+          search={{ upgraded: false }}
           className="text-sm text-warm-500 hover:text-warm-700 transition-colors"
         >
           Back to Dashboard

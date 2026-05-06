@@ -167,7 +167,7 @@ function WhatsAppPage() {
       await selectWaContact({ data: { waSessionId: state.waSessionId, contactJid: contact.jid } })
       hasPartnerJid.current = true
       setState({ phase: 'connected', waSessionId: state.waSessionId })
-      navigate({ to: '/dashboard' })
+      navigate({ to: '/dashboard', search: { upgraded: false } })
     } catch (err) {
       setState({
         phase: 'error',
